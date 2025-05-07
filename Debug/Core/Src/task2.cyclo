@@ -1,0 +1,4 @@
+../Core/Src/task2.c:14:6:Task2_Init	1
+../Core/Src/task2.c:22:6:Task2_LedBlink	1
+../Core/Src/task2.c:31:6:Task2_LedTurnOn	1
+../Core/Src/task2.c:39:6:Task2_LedTurnOff	1
