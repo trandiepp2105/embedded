@@ -14,4 +14,4 @@
 ../Core/Src/manual_lcd.c:369:6:Manual_LCD_DrawString	4
 ../Core/Src/manual_lcd.c:386:6:Manual_LCD_DrawLayout	1
 ../Core/Src/manual_lcd.c:482:6:Manual_LCD_UpdateInfoText	1
-../Core/Src/manual_lcd.c:507:6:Manual_LCD_RefillTaskBox	6
+../Core/Src/manual_lcd.c:507:6:Manual_LCD_RefillTaskBox	5

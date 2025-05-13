@@ -45,7 +45,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c2;
-
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
@@ -61,31 +60,45 @@ static void MX_I2C2_Init(void);
 
 /* USER CODE END PFP */
 
+/**
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
   // Task Box Definitions
-  uint16_t margin = 15;
+  uint16_t margin = 10;
   uint16_t spacing_between_boxes = 10;
   // Assuming LCD_WIDTH is 240 and LCD_HEIGHT is 320 from manual_lcd.h
   // If LCD_WIDTH is not 240, task_box_w calculation will be incorrect.
   uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
   uint16_t task_box_h = 70;
-  uint16_t info_box_y = 10;
+  uint16_t info_box_x = 20;
   uint16_t info_box_h = 30;
-  uint16_t start_y_tasks_row1 = info_box_y + info_box_h + 20;
-  uint16_t start_y_tasks_row2 = start_y_tasks_row1 + task_box_h + spacing_between_boxes;
+  uint16_t start_x_tasks_row1 = info_box_x + info_box_h + 20;
+  uint16_t start_x_tasks_row2 = start_x_tasks_row1 + task_box_h + spacing_between_boxes;
 
   TaskBox_t task_boxes[] = {
-      {margin, start_y_tasks_row1, task_box_w, task_box_h, "Task 02-1"},
-      {(uint16_t)(margin + task_box_w + spacing_between_boxes), start_y_tasks_row1, task_box_w, task_box_h, "Task 02-2"},
-      {margin, start_y_tasks_row2, task_box_w, task_box_h, "Task 02-3"},
-      {(uint16_t)(margin + task_box_w + spacing_between_boxes), start_y_tasks_row2, task_box_w, task_box_h, "Task 02-4"}};
+      {start_x_tasks_row1, margin, task_box_w, task_box_h, "Task 02-1"},
+      {start_x_tasks_row1, (uint16_t)(margin + task_box_w + spacing_between_boxes), task_box_w, task_box_h, "Task 02-2"},
+      {start_x_tasks_row2, margin, task_box_w, task_box_h, "Task 02-3"},
+      {start_x_tasks_row2, (uint16_t)(margin + task_box_w + spacing_between_boxes), task_box_w, task_box_h, "Task 02-4"}};
   const int num_tasks = sizeof(task_boxes) / sizeof(task_boxes[0]);
-  int highlighted_task_index = -1;
+  // int highlighted_task_index = -1; // Not currently used
   char info_text_buffer[50];
   Coordinate rawPoint, displayPoint;
+
+  // Define the Back Button Box (ADJUST x, y, w, h AS PER YOUR Manual_LCD_DrawLayout)
+  uint16_t back_button_h = 45;
+  uint16_t back_button_w = 90; // Example height for back button
+  TaskBox_t back_button_box = {
+      (uint16_t)(start_x_tasks_row2 + task_box_h + 20),        // x: same margin as tasks
+      (uint16_t)(margin + task_box_w + spacing_between_boxes), // y: towards the bottom
+      back_button_w,                                           // w: span most of the width
+      back_button_h,                                           // h: defined height
+      "Back"                                                   // name (used for internal logic if needed, not displayed by default)
+  };
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -111,24 +124,27 @@ int main(void)
   Manual_LCD_Init();
   Manual_Touch_Init(&hspi1);
 
-  // Temporarily COMMENT OUT calibration for testing basic touch functionality
-  /*
-  Manual_LCD_Clear(COLOR_BLACK);                                                                        // Clear screen before calibration messages
-  Manual_LCD_DrawString(10, LCD_HEIGHT / 2 - 20, "Calibrating Touch...", COLOR_WHITE, COLOR_BLACK, 1);  // Adjusted Y for better spacing
-  Manual_LCD_DrawString(10, LCD_HEIGHT / 2, "Tap points as they appear.", COLOR_WHITE, COLOR_BLACK, 1); // Adjusted Y
-  HAL_Delay(1500);                                                                                      // Give user a bit more time to read message
-  Manual_Touch_Calibrate(COLOR_YELLOW, COLOR_BLACK); // This is where it might hang
-  Manual_LCD_Clear(COLOR_BLACK); // Clear screen after calibration UI
-  */
-
-  Manual_LCD_Clear(COLOR_BLACK); // Clear the screen for the test
-  Manual_LCD_DrawLayout();       // Draw the main layout (or a simpler test screen if preferred)
-
-  // Initial Info Text for testing
-  sprintf(info_text_buffer, "Touch Test Mode");
-  Manual_LCD_UpdateInfoText(info_text_buffer);
+  Manual_LCD_Clear(COLOR_BLACK);
+  Manual_LCD_DrawLayout(); // This function should draw the tasks and the back button
 
   /* USER CODE BEGIN WHILE */
+  // while (1)
+  // {
+  //   /* USER CODE END WHILE */
+
+  //   /* USER CODE BEGIN 3 */
+  //   if (Manual_Touch_Pressed())
+  //   {
+  //     if (Manual_Touch_GetRawPoint(&rawPoint))
+  //     {
+
+  //       Manual_Touch_ApplyCalibration(&displayPoint, &rawPoint);
+  //       sprintf(info_text_buffer, "Touch: X=%03u Y=%03u", displayPoint.x, displayPoint.y);
+  //       Manual_LCD_UpdateInfoText(info_text_buffer);
+  //     }
+  //   }
+  // }
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -138,25 +154,47 @@ int main(void)
     {
       if (Manual_Touch_GetRawPoint(&rawPoint))
       {
-        // Display raw touch coordinates in the info box
-        sprintf(info_text_buffer, "Raw: X=%03u Y=%03u", rawPoint.x, rawPoint.y);
+        Manual_Touch_ApplyCalibration(&displayPoint, &rawPoint);
+
+        int task_hit_index = -1;
+        for (int i = 0; i < num_tasks; i++)
+        {
+          if (displayPoint.x >= task_boxes[i].x && displayPoint.x < (task_boxes[i].x + task_boxes[i].w) &&
+              displayPoint.y >= task_boxes[i].y && displayPoint.y < (task_boxes[i].y + task_boxes[i].h))
+          {
+            task_hit_index = i;
+            break;
+          }
+        }
+
+        bool back_button_pressed = false;
+        if (displayPoint.x >= back_button_box.x && displayPoint.x < (back_button_box.x + back_button_box.w) &&
+            displayPoint.y >= back_button_box.y && displayPoint.y < (back_button_box.y + back_button_box.h))
+        {
+          back_button_pressed = true;
+        }
+
+        if (task_hit_index != -1)
+        {
+          sprintf(info_text_buffer, "Task: %s", task_boxes[task_hit_index].name);
+        }
+        else if (back_button_pressed)
+        {
+          sprintf(info_text_buffer, "Back"); // Display "Back" when back button is touched
+        }
+        else
+        {
+          sprintf(info_text_buffer, "Touch: X=%03u Y=%03u", displayPoint.x, displayPoint.y);
+        }
         Manual_LCD_UpdateInfoText(info_text_buffer);
 
-        // Wait for touch release to prevent continuous updates for a single press
         while (Manual_Touch_Pressed())
         {
-          HAL_Delay(20); // Small delay
+          HAL_Delay(20);
         }
-        // Optionally, update info text after release
-        sprintf(info_text_buffer, "Released. Tap again.");
-        Manual_LCD_UpdateInfoText(info_text_buffer);
-        HAL_Delay(500);                               // Show release message briefly
-        sprintf(info_text_buffer, "Touch Test Mode"); // Revert to default test message
-        Manual_LCD_UpdateInfoText(info_text_buffer);
       }
       else
       {
-        // Manual_Touch_Pressed() was true, but GetRawPoint failed
         sprintf(info_text_buffer, "Pressed, GetPoint Fail");
         Manual_LCD_UpdateInfoText(info_text_buffer);
         while (Manual_Touch_Pressed())
@@ -165,9 +203,9 @@ int main(void)
         }
       }
     }
-    HAL_Delay(50); // Polling delay for touch checks
+    HAL_Delay(50);
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -222,13 +260,9 @@ void SystemClock_Config(void)
  */
 static void MX_I2C2_Init(void)
 {
-
   /* USER CODE BEGIN I2C2_Init 0 */
-
   /* USER CODE END I2C2_Init 0 */
-
   /* USER CODE BEGIN I2C2_Init 1 */
-
   /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
   hi2c2.Init.ClockSpeed = 100000;
@@ -244,7 +278,6 @@ static void MX_I2C2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN I2C2_Init 2 */
-
   /* USER CODE END I2C2_Init 2 */
 }
 
@@ -255,15 +288,10 @@ static void MX_I2C2_Init(void)
  */
 static void MX_SPI1_Init(void)
 {
-
   /* USER CODE BEGIN SPI1_Init 0 */
-
   /* USER CODE END SPI1_Init 0 */
-
   /* USER CODE BEGIN SPI1_Init 1 */
-
   /* USER CODE END SPI1_Init 1 */
-  /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
@@ -271,7 +299,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -281,7 +309,6 @@ static void MX_SPI1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI1_Init 2 */
-
   /* USER CODE END SPI1_Init 2 */
 }
 
@@ -294,7 +321,6 @@ static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
-
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
@@ -304,44 +330,36 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
-
   /*Configure GPIO pin Output Level for TP_CS to be deselected initially */
-  HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET); // TP_CS high (deselected)
+  HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin : PA1 (Nếu bạn không dùng, có thể bỏ qua) */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /*Configure GPIO pin : PA1 (If not used, can be omitted) */
+  // GPIO_InitStruct.Pin = GPIO_PIN_1;
+  // GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  // GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LCD_RST_Pin LCD_BL_Pin LCD_CS_Pin LCD_DC_Pin */
   GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH; // Tăng tốc độ cho các chân LCD SPI
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : TP_CS_Pin */
   GPIO_InitStruct.Pin = TP_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH; // Tăng tốc độ cho TP_CS
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(TP_CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TP_IRQ_Pin (Cấu hình cho polling) */
+  /*Configure GPIO pin : TP_IRQ_Pin (Configured for polling) */
   GPIO_InitStruct.Pin = TP_IRQ_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT; // Input để đọc trạng thái
-  GPIO_InitStruct.Pull = GPIO_PULLUP;     // Kéo lên vì TP_IRQ là active-low
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(TP_IRQ_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init - Bỏ qua nếu dùng polling cho TP_IRQ */
-  /*
-  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
-  */
-
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
@@ -356,7 +374,6 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {

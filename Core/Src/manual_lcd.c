@@ -397,7 +397,7 @@ void Manual_LCD_DrawLayout(void)
 
     // 1. Top Info Box: "Nhom: [nhom 01]"
     uint16_t info_box_x = 10;
-    uint16_t info_box_y = 10;
+    uint16_t info_box_y = 20;
     uint16_t info_box_w = 150;
     uint16_t info_box_h = 30;
     const char *info_text = "Nhom: [nhom 01]";
@@ -409,7 +409,7 @@ void Manual_LCD_DrawLayout(void)
     Manual_LCD_DrawString(info_text_x, info_text_y, info_text, text_color, box_fill_color, font_size);
 
     // 2. Task Boxes Grid
-    uint16_t margin = 15;
+    uint16_t margin = 10;
     uint16_t spacing_between_boxes = 10;
     uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
     uint16_t task_box_h = 70;
@@ -461,8 +461,8 @@ void Manual_LCD_DrawLayout(void)
     Manual_LCD_DrawString(text_task4_x, text_task4_y, task4_text, text_color, box_fill_color, font_size);
 
     // 3. Back Button
-    uint16_t back_button_h = 30;
-    uint16_t back_button_w = 90;
+    uint16_t back_button_h = 45;
+    uint16_t back_button_w = task_box_w;
     const char *back_button_text = "<<Back";
     uint16_t back_button_text_len = strlen(back_button_text);
     uint16_t back_button_text_pixel_width = back_button_text_len * 6 * font_size; // 6 is char width with spacing for 5x7 font

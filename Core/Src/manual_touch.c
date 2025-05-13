@@ -73,7 +73,7 @@ uint8_t Manual_Touch_GetRawPoint(Coordinate *rawPoint)
     for (i = 0; i < TOUCH_AVG_SAMPLES; i++)
     {
         if (!Manual_Touch_Pressed() && i >= 1)
-        {   // Check if pen lifted after at least one sample
+        { // Check if pen lifted after at least one sample
             // If pen lifted early, try to use what we have if enough samples, or fail
             if (i < 3)
                 return 0; // Not enough samples for even one average
@@ -85,7 +85,7 @@ uint8_t Manual_Touch_GetRawPoint(Coordinate *rawPoint)
             break; // Exit X sampling loop
         }
         x_samples[i] = TP_Read_ADC_Raw(TP_CMD_READ_X);
-        HAL_Delay(2); // Increased delay slightly
+        // HAL_Delay(1); // Increased delay slightly
     }
 
     // Read all Y samples
@@ -102,7 +102,7 @@ uint8_t Manual_Touch_GetRawPoint(Coordinate *rawPoint)
             break; // Exit Y sampling loop
         }
         y_samples[i] = TP_Read_ADC_Raw(TP_CMD_READ_Y);
-        HAL_Delay(2); // Increased delay slightly
+        // HAL_Delay(2); // Increased delay slightly
     }
 
     // Averaging and filtering logic from original code
@@ -173,8 +173,8 @@ uint8_t Manual_Touch_ApplyCalibration(Coordinate *displayPoint, const Coordinate
     if (touchMatrix.Divider == 0)
     { // Not calibrated or calibration failed
         // Fallback: direct scaling (highly inaccurate without calibration)
-        displayPoint->x = (uint16_t)(((long)screenPoint->x * LCD_WIDTH) / 4095);
-        displayPoint->y = (uint16_t)(((long)screenPoint->y * LCD_HEIGHT) / 4095);
+        displayPoint->x = (uint16_t)(((long)screenPoint->x * LCD_HEIGHT) / 4095 - 20);
+        displayPoint->y = (uint16_t)(((long)screenPoint->y * LCD_WIDTH) / 4095 - 20);
         return 0; // Indicated that calibration matrix was not used
     }
 
