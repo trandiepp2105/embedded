@@ -63,6 +63,10 @@ void Error_Handler(void);
 #define MOSI_GPIO_Port GPIOA
 #define LCD_RST_Pin GPIO_PIN_2
 #define LCD_RST_GPIO_Port GPIOB
+#define SCL_Pin GPIO_PIN_10
+#define SCL_GPIO_Port GPIOB
+#define SDA_Pin GPIO_PIN_11
+#define SDA_GPIO_Port GPIOB
 #define TP_CS_Pin GPIO_PIN_9
 #define TP_CS_GPIO_Port GPIOA
 #define SCLK_Pin GPIO_PIN_3

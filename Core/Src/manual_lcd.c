@@ -1,319 +1,514 @@
-/* Includes ------------------------------------------------------------------*/
-#include "manual_lcd.h" // Bao gồm file header tương ứng
+#include "manual_lcd.h"
+#include "font.h" // You'll need to create this file or provide font data
+#include <string.h>
 
-/* Private variables ---------------------------------------------------------*/
+// External SPI handle defined in main.c
+extern SPI_HandleTypeDef hspi1;
 
-// !! QUAN TRỌNG: Đảm bảo tên handle này khớp với tên được tạo bởi CubeMX trong main.c !!
-extern SPI_HandleTypeDef hspi1; // Giả sử bạn dùng SPI1
-#define LCD_SPI_HANDLE &hspi1 // Con trỏ tới SPI handle đang sử dụng
+// Low-level SPI communication functions
+static void LCD_SPI_Send(uint8_t data) {
+    HAL_SPI_Transmit(&hspi1, &data, 1, HAL_MAX_DELAY);
+}
 
-/* Dữ liệu Font -------------------------------------------------------------*/
-// --- Dữ liệu Font8 (5x8) - Đã copy từ file font8.c của bạn ---
-static const uint8_t Font8_Table[] = {
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFA,0x00,0x00,0x00,0xC0,0x00,0xC0,0x00,0x28,
-	0xFE,0x28,0xFE,0x28,0x24,0xD4,0x54,0x54,0x18,0x48,0x54,0x2A,0x14,0x12,0x44,0xAC,
-	0x54,0x2A,0x54,0x00,0x40,0x40,0x00,0x00,0x00,0x7C,0x82,0x00,0x00,0x00,0x00,0x82,
-	0x7C,0x00,0x14,0x08,0x3E,0x08,0x14,0x08,0x08,0x3E,0x08,0x08,0x00,0xA0,0x60,0x00,
-	0x00,0x08,0x08,0x08,0x08,0x08,0x00,0x60,0x60,0x00,0x00,0x04,0x0A,0x12,0x24,0x44,
-	0x3E,0x4A,0x52,0x62,0x3E,0x00,0x44,0xFE,0x04,0x00,0x44,0x8A,0x92,0x92,0x64,0x44,
-	0x92,0x92,0x92,0x6C,0x1C,0x24,0x44,0xFE,0x04,0xEC,0x92,0x92,0x92,0x8C,0x1C,0x24,
-	0x92,0x92,0x8C,0x80,0x8A,0x92,0xA2,0xC0,0x6C,0x92,0x92,0x92,0x6C,0x60,0x92,0x92,
-	0x52,0x3C,0x00,0x60,0x00,0x60,0x00,0x00,0xA0,0x60,0x00,0x00,0x10,0x28,0x44,0x82,
-	0x00,0x28,0x28,0x28,0x28,0x28,0x00,0x82,0x44,0x28,0x10,0x40,0x82,0x92,0x92,0x60,
-	0x7C,0x82,0xBA,0xAA,0x78,0x7E,0x88,0x88,0x88,0x7E,0xFE,0x92,0x92,0x92,0x6C,0x3C,
-	0x42,0x82,0x82,0x44,0xFE,0x82,0x82,0x82,0x7C,0xFE,0x92,0x92,0x92,0x82,0xFE,0x90,
-	0x90,0x88,0x80,0x3C,0x42,0x82,0x92,0x5C,0xFE,0x10,0x10,0x10,0xFE,0x00,0x82,0xFE,
-	0x82,0x00,0x0C,0x02,0x82,0xFC,0x80,0xFE,0x10,0x28,0x44,0x82,0xFE,0x02,0x02,0x02,
-	0x02,0xFE,0x40,0x30,0x40,0xFE,0xFE,0x40,0x20,0x10,0xFE,0x7C,0x82,0x82,0x82,0x7C,
-	0xFE,0x90,0x90,0x90,0x60,0x7C,0x82,0x8A,0x84,0x7A,0xFE,0x90,0x98,0x94,0x62,0x64,
-	0x92,0x92,0x92,0x4C,0x80,0x80,0xFE,0x80,0x80,0xFC,0x02,0x02,0x02,0xFC,0xF8,0x04,
-	0x02,0x04,0xF8,0xFC,0x02,0x1C,0x02,0xFC,0xC6,0x28,0x10,0x28,0xC6,0xE0,0x10,0x0E,
-	0x10,0xE0,0x86,0x8A,0x92,0xA2,0xC2,0x00,0xFE,0x82,0x82,0x00,0x40,0x20,0x10,0x08,
-	0x04,0x00,0x82,0x82,0xFE,0x00,0x00,0x10,0x28,0x44,0x00,0x02,0x02,0x02,0x02,0x02,
-	0x00,0x80,0x40,0x00,0x00,0x04,0x2A,0x2A,0x2A,0x3E,0xFE,0x12,0x22,0x22,0x1C,0x1C,
-	0x22,0x22,0x22,0x04,0x1C,0x22,0x22,0x12,0xFE,0x3C,0x5A,0x52,0x52,0x18,0x08,0x7E,
-	0x88,0x80,0x80,0x70,0x92,0x92,0x52,0x3E,0xFE,0x10,0x10,0x10,0x0E,0x00,0x22,0xBE,
-	0x02,0x00,0x04,0x02,0x22,0xBC,0x00,0x00,0xFE,0x10,0x28,0x44,0x00,0x82,0xFE,0x02,
-	0x00,0x3E,0x20,0x18,0x20,0x1E,0x3E,0x10,0x10,0x10,0x0E,0x1C,0x22,0x22,0x22,0x1C,
-	0xFE,0x22,0x22,0x22,0x1C,0x1C,0x22,0x22,0x12,0xFE,0x3E,0x10,0x10,0x08,0x08,0x48,
-	0x52,0x52,0x52,0x24,0x00,0x08,0x7C,0x88,0x00,0x3C,0x02,0x02,0x04,0x3E,0x38,0x04,
-	0x02,0x04,0x38,0x3C,0x02,0x0C,0x02,0x3C,0x66,0x18,0x18,0x18,0x66,0x78,0x04,0x02,
-	0x42,0x3C,0x46,0x4A,0x52,0x62,0x02,0x00,0x10,0x6C,0x82,0x00,0x00,0x00,0xFE,0x00,
-	0x00,0x00,0x82,0x6C,0x10,0x00,0x20,0x10,0x08,0x10,0x20
-};
+static void LCD_Write_Cmd(uint8_t cmd) {
+    HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_RESET); // DC low for command
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET); // CS low to select
+    LCD_SPI_Send(cmd);
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);   // CS high to deselect
+}
 
-// Định nghĩa biến font (khớp với extern trong .h)
-const Manual_FontDef Font8 = {Font8_Table, 5, 8}; // Rộng 5, Cao 8
+static void LCD_Write_Data(uint8_t data) {
+    HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_SET);   // DC high for data
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET); // CS low to select
+    LCD_SPI_Send(data);
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);   // CS high to deselect
+}
 
-/* Private function prototypes -----------------------------------------------*/
-static void LCD_Select(void);
-static void LCD_Deselect(void);
-static void LCD_SetDataMode(void);
-static void LCD_SetCommandMode(void);
-static void LCD_Reset(void);
-static HAL_StatusTypeDef LCD_SPI_Transmit(uint8_t *pData, uint16_t Size);
-static void LCD_SendCommand(uint8_t cmd);
-static void LCD_SendData(uint8_t data);
-static void LCD_SendDataBuffer(uint8_t *pData, uint16_t Size);
-static void LCD_WriteData16(uint16_t data);
+static void LCD_Write_Data16(uint16_t data) {
+    HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_SET);   // DC high for data
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET); // CS low to select
+    uint8_t bytes[2];
+    bytes[0] = (data >> 8) & 0xFF;
+    bytes[1] = data & 0xFF;
+    HAL_SPI_Transmit(&hspi1, bytes, 2, HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);   // CS high to deselect
+}
 
-/* Exported functions ---------------------------------------------------------*/
+// Set drawing window
+static void LCD_Set_Address_Window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+    LCD_Write_Cmd(0x2A); // Column Address Set
+    LCD_Write_Data(x1 >> 8);
+    LCD_Write_Data(x1 & 0xFF);
+    LCD_Write_Data(x2 >> 8);
+    LCD_Write_Data(x2 & 0xFF);
 
-// --- Các hàm public giữ nguyên nội dung như phiên bản trước ---
-// Init, BacklightOn/Off, SetWindow, DrawPixel, FillScreen,
-// FillRectangle, DrawRectangle, DrawChar, WriteString, DrawLayout
+    LCD_Write_Cmd(0x2B); // Page Address Set
+    LCD_Write_Data(y1 >> 8);
+    LCD_Write_Data(y1 & 0xFF);
+    LCD_Write_Data(y2 >> 8);
+    LCD_Write_Data(y2 & 0xFF);
 
-/** @brief Khởi tạo LCD ILI9341. */
+    LCD_Write_Cmd(0x2C); // Memory Write
+}
+
 void Manual_LCD_Init(void) {
-    LCD_Reset();
-    LCD_SendCommand(ILI9341_SWRESET);
-    HAL_Delay(150);
-    LCD_SendCommand(ILI9341_SLPOUT);
-    HAL_Delay(120); // Delay quan trọng
-    LCD_SendCommand(ILI9341_PIXFMT);
-    LCD_SendData(0x55); // 16 bpp
-    LCD_SendCommand(ILI9341_MADCTL);
-    LCD_SendData(0x48); // Hướng quét mặc định
-    LCD_SendCommand(ILI9341_DISPON);
+    // Hardware Reset
+    HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET);
+    HAL_Delay(100);
+    HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_SET);
+    HAL_Delay(100);
+
+    // Backlight ON
+    HAL_GPIO_WritePin(LCD_BL_GPIO_Port, LCD_BL_Pin, GPIO_PIN_SET);
     HAL_Delay(10);
-    Manual_LCD_BacklightOn();
+
+    // Initialization sequence (Example for ILI9341 - ADJUST FOR YOUR LCD)
+    LCD_Write_Cmd(0xCF); // Power Control B
+    LCD_Write_Data(0x00);
+    LCD_Write_Data(0xC1);
+    LCD_Write_Data(0x30);
+
+    LCD_Write_Cmd(0xED); // Power on sequence control
+    LCD_Write_Data(0x64);
+    LCD_Write_Data(0x03);
+    LCD_Write_Data(0x12);
+    LCD_Write_Data(0x81);
+
+    LCD_Write_Cmd(0xE8); // Driver timing control A
+    LCD_Write_Data(0x85);
+    LCD_Write_Data(0x00);
+    LCD_Write_Data(0x78);
+
+    LCD_Write_Cmd(0xCB); // Power control A
+    LCD_Write_Data(0x39);
+    LCD_Write_Data(0x2C);
+    LCD_Write_Data(0x00);
+    LCD_Write_Data(0x34);
+    LCD_Write_Data(0x02);
+
+    LCD_Write_Cmd(0xF7); // Pump ratio control
+    LCD_Write_Data(0x20);
+
+    LCD_Write_Cmd(0xEA); // Driver timing control B
+    LCD_Write_Data(0x00);
+    LCD_Write_Data(0x00);
+
+    LCD_Write_Cmd(0xC0); // Power Control 1
+    LCD_Write_Data(0x23); // VRH[5:0]
+
+    LCD_Write_Cmd(0xC1); // Power Control 2
+    LCD_Write_Data(0x10); // SAP[2:0];BT[3:0]
+
+    LCD_Write_Cmd(0xC5); // VCOM Control 1
+    LCD_Write_Data(0x3E); // Contrast
+    LCD_Write_Data(0x28);
+
+    LCD_Write_Cmd(0xC7); // VCOM Control 2
+    LCD_Write_Data(0x86); // --
+
+    LCD_Write_Cmd(0x36); // Memory Access Control
+    // LCD_Write_Data(0x08); // Previous value
+    LCD_Write_Data(0x28); // Try this: MV=1, MY=0, MX=0, BGR=1 (Landscape, X:T-B, Y:L-R)
+
+    LCD_Write_Cmd(0x3A); // Pixel Format Set
+    LCD_Write_Data(0x55); // 16 bits/pixel
+
+    LCD_Write_Cmd(0xB1); // Frame Rate Control (In Normal Mode/Full Colors)
+    LCD_Write_Data(0x00);
+    LCD_Write_Data(0x18);
+
+    LCD_Write_Cmd(0xB6); // Display Function Control
+    LCD_Write_Data(0x08);
+    LCD_Write_Data(0x82);
+    LCD_Write_Data(0x27);
+
+    LCD_Write_Cmd(0xF2); // Enable 3G
+    LCD_Write_Data(0x00); // 3Gamma Function Disable
+
+    LCD_Write_Cmd(0x26); // Gamma Set
+    LCD_Write_Data(0x01); // Gamma curve selected
+
+    // ... (Positive and Negative Gamma Correction remain the same) ...
+    LCD_Write_Cmd(0xE0); // Positive Gamma Correction
+    LCD_Write_Data(0x0F);
+    LCD_Write_Data(0x31);
+    LCD_Write_Data(0x2B);
+    LCD_Write_Data(0x0C);
+    LCD_Write_Data(0x0E);
+    LCD_Write_Data(0x08);
+    LCD_Write_Data(0x4E);
+    LCD_Write_Data(0xF1);
+    LCD_Write_Data(0x37);
+    LCD_Write_Data(0x07);
+    LCD_Write_Data(0x10);
+    LCD_Write_Data(0x03);
+    LCD_Write_Data(0x0E);
+    LCD_Write_Data(0x09);
+    LCD_Write_Data(0x00);
+
+    LCD_Write_Cmd(0xE1); // Negative Gamma Correction
+    LCD_Write_Data(0x00);
+    LCD_Write_Data(0x0E);
+    LCD_Write_Data(0x14);
+    LCD_Write_Data(0x03);
+    LCD_Write_Data(0x11);
+    LCD_Write_Data(0x07);
+    LCD_Write_Data(0x31);
+    LCD_Write_Data(0xC1);
+    LCD_Write_Data(0x48);
+    LCD_Write_Data(0x08);
+    LCD_Write_Data(0x0F);
+    LCD_Write_Data(0x0C);
+    LCD_Write_Data(0x31);
+    LCD_Write_Data(0x36);
+    LCD_Write_Data(0x0F);
+
+
+    LCD_Write_Cmd(0x11); // Exit Sleep
+    HAL_Delay(120);
+    LCD_Write_Cmd(0x29); // Display ON
+
+    Manual_LCD_Clear(COLOR_BLACK);
 }
 
-/** @brief Bật đèn nền. */
-void Manual_LCD_BacklightOn(void) {
-#ifdef LCD_BL_PORT
-    HAL_GPIO_WritePin(LCD_BL_PORT, LCD_BL_PIN, GPIO_PIN_SET);
-#endif
-}
+//void Manual_LCD_Init(void) {
+//    // Hardware Reset
+//    HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET);
+//    HAL_Delay(100);
+//    HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_SET);
+//    HAL_Delay(100);
+//
+//    // Backlight ON (Assuming active high, adjust if necessary)
+//    HAL_GPIO_WritePin(LCD_BL_GPIO_Port, LCD_BL_Pin, GPIO_PIN_SET);
+//    HAL_Delay(10);
+//
+//    // Initialization sequence (Example for ILI9341 - **ADJUST FOR YOUR LCD**)
+//    LCD_Write_Cmd(0xCF); // Power Control B
+//    LCD_Write_Data(0x00);
+//    LCD_Write_Data(0xC1);
+//    LCD_Write_Data(0x30);
+//
+//    LCD_Write_Cmd(0xED); // Power on sequence control
+//    LCD_Write_Data(0x64);
+//    LCD_Write_Data(0x03);
+//    LCD_Write_Data(0x12);
+//    LCD_Write_Data(0x81);
+//
+//    LCD_Write_Cmd(0xE8); // Driver timing control A
+//    LCD_Write_Data(0x85);
+//    LCD_Write_Data(0x00);
+//    LCD_Write_Data(0x78);
+//
+//    LCD_Write_Cmd(0xCB); // Power control A
+//    LCD_Write_Data(0x39);
+//    LCD_Write_Data(0x2C);
+//    LCD_Write_Data(0x00);
+//    LCD_Write_Data(0x34);
+//    LCD_Write_Data(0x02);
+//
+//    LCD_Write_Cmd(0xF7); // Pump ratio control
+//    LCD_Write_Data(0x20);
+//
+//    LCD_Write_Cmd(0xEA); // Driver timing control B
+//    LCD_Write_Data(0x00);
+//    LCD_Write_Data(0x00);
+//
+//    LCD_Write_Cmd(0xC0); // Power Control 1
+//    LCD_Write_Data(0x23); // VRH[5:0]
+//
+//    LCD_Write_Cmd(0xC1); // Power Control 2
+//    LCD_Write_Data(0x10); // SAP[2:0];BT[3:0]
+//
+//    LCD_Write_Cmd(0xC5); // VCOM Control 1
+//    LCD_Write_Data(0x3E); // Contrast
+//    LCD_Write_Data(0x28);
+//
+//    LCD_Write_Cmd(0xC7); // VCOM Control 2
+//    LCD_Write_Data(0x86); // --
+//
+//    LCD_Write_Cmd(0x36); // Memory Access Control
+//    LCD_Write_Data(0x48); // MY, MX, MV, ML, BGR, MH, 0, 0 - Adjust for orientation and color order
+//
+//    LCD_Write_Cmd(0x3A); // Pixel Format Set
+//    LCD_Write_Data(0x55); // 16 bits/pixel
+//
+//    LCD_Write_Cmd(0xB1); // Frame Rate Control (In Normal Mode/Full Colors)
+//    LCD_Write_Data(0x00);
+//    LCD_Write_Data(0x18);
+//
+//    LCD_Write_Cmd(0xB6); // Display Function Control
+//    LCD_Write_Data(0x08);
+//    LCD_Write_Data(0x82);
+//    LCD_Write_Data(0x27);
+//
+//    LCD_Write_Cmd(0xF2); // Enable 3G
+//    LCD_Write_Data(0x00); // 3Gamma Function Disable
+//
+//    LCD_Write_Cmd(0x26); // Gamma Set
+//    LCD_Write_Data(0x01); // Gamma curve selected
+//
+//    LCD_Write_Cmd(0xE0); // Positive Gamma Correction
+//    LCD_Write_Data(0x0F);
+//    LCD_Write_Data(0x31);
+//    LCD_Write_Data(0x2B);
+//    LCD_Write_Data(0x0C);
+//    LCD_Write_Data(0x0E);
+//    LCD_Write_Data(0x08);
+//    LCD_Write_Data(0x4E);
+//    LCD_Write_Data(0xF1);
+//    LCD_Write_Data(0x37);
+//    LCD_Write_Data(0x07);
+//    LCD_Write_Data(0x10);
+//    LCD_Write_Data(0x03);
+//    LCD_Write_Data(0x0E);
+//    LCD_Write_Data(0x09);
+//    LCD_Write_Data(0x00);
+//
+//    LCD_Write_Cmd(0xE1); // Negative Gamma Correction
+//    LCD_Write_Data(0x00);
+//    LCD_Write_Data(0x0E);
+//    LCD_Write_Data(0x14);
+//    LCD_Write_Data(0x03);
+//    LCD_Write_Data(0x11);
+//    LCD_Write_Data(0x07);
+//    LCD_Write_Data(0x31);
+//    LCD_Write_Data(0xC1);
+//    LCD_Write_Data(0x48);
+//    LCD_Write_Data(0x08);
+//    LCD_Write_Data(0x0F);
+//    LCD_Write_Data(0x0C);
+//    LCD_Write_Data(0x31);
+//    LCD_Write_Data(0x36);
+//    LCD_Write_Data(0x0F);
+//
+//    LCD_Write_Cmd(0x11); // Exit Sleep
+//    HAL_Delay(120);
+//    LCD_Write_Cmd(0x29); // Display ON
+//
+//    Manual_LCD_Clear(COLOR_RED);
+//}
+//
 
-/** @brief Tắt đèn nền. */
-void Manual_LCD_BacklightOff(void) {
-#ifdef LCD_BL_PORT
-    HAL_GPIO_WritePin(LCD_BL_PORT, LCD_BL_PIN, GPIO_PIN_RESET);
-#endif
-}
+void Manual_LCD_Clear(uint16_t color) {
+    LCD_Set_Address_Window(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_SET);   // DC high for data
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET); // CS low to select
 
-/** @brief Đặt cửa sổ vẽ. */
-void Manual_LCD_SetWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
-    if (x1 >= ILI9341_WIDTH) x1 = ILI9341_WIDTH - 1;
-    if (x2 >= ILI9341_WIDTH) x2 = ILI9341_WIDTH - 1;
-    if (y1 >= ILI9341_HEIGHT) y1 = ILI9341_HEIGHT - 1;
-    if (y2 >= ILI9341_HEIGHT) y2 = ILI9341_HEIGHT - 1;
-    if (x1 > x2) { uint16_t t = x1; x1 = x2; x2 = t; }
-    if (y1 > y2) { uint16_t t = y1; y1 = y2; y2 = t; }
-
-    LCD_SendCommand(ILI9341_CASET); // Column Address Set
-    {
-        uint8_t data[] = {(x1 >> 8) & 0xFF, x1 & 0xFF, (x2 >> 8) & 0xFF, x2 & 0xFF};
-        LCD_SendDataBuffer(data, 4);
-    }
-    LCD_SendCommand(ILI9341_PASET); // Page Address Set
-    {
-        uint8_t data[] = {(y1 >> 8) & 0xFF, y1 & 0xFF, (y2 >> 8) & 0xFF, y2 & 0xFF};
-        LCD_SendDataBuffer(data, 4);
-    }
-    LCD_SendCommand(ILI9341_RAMWR); // Chuẩn bị ghi vào GRAM
-}
-
-/** @brief Vẽ một pixel. */
-void Manual_LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t color) {
-    if((x >= ILI9341_WIDTH) || (y >= ILI9341_HEIGHT)) return;
-    Manual_LCD_SetWindow(x, y, x, y);
-    // Chuẩn bị gửi màu
-    LCD_Select();
-    LCD_SetDataMode();
-    LCD_WriteData16(color);
-    LCD_Deselect();
-}
-
-/** @brief Tô toàn bộ màn hình. */
-void Manual_LCD_FillScreen(uint16_t color) {
-    Manual_LCD_SetWindow(0, 0, ILI9341_WIDTH - 1, ILI9341_HEIGHT - 1);
-    LCD_Select();
-    LCD_SetDataMode();
     uint8_t color_bytes[2] = {(color >> 8) & 0xFF, color & 0xFF};
-    for(uint32_t i = 0; i < (uint32_t)ILI9341_WIDTH * ILI9341_HEIGHT; i++) {
-       LCD_SPI_Transmit(color_bytes, 2);
+    for (uint32_t i = 0; i < (uint32_t)LCD_WIDTH * LCD_HEIGHT; i++) {
+        HAL_SPI_Transmit(&hspi1, color_bytes, 2, HAL_MAX_DELAY);
     }
-    LCD_Deselect();
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);   // CS high to deselect
 }
 
-/** @brief Tô một vùng hình chữ nhật. */
-void Manual_LCD_FillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
-    if ((x >= ILI9341_WIDTH) || (y >= ILI9341_HEIGHT)) return;
-    if ((x + width) > ILI9341_WIDTH) width = ILI9341_WIDTH - x;
-    if ((y + height) > ILI9341_HEIGHT) height = ILI9341_HEIGHT - y;
-    if (width == 0 || height == 0) return;
+void Manual_LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t color) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+    LCD_Set_Address_Window(x, y, x, y);
+    LCD_Write_Data16(color);
+}
 
-    Manual_LCD_SetWindow(x, y, x + width - 1, y + height - 1);
-    LCD_Select();
-    LCD_SetDataMode();
+void Manual_LCD_DrawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) {
+    int16_t steep = abs(y2 - y1) > abs(x2 - x1);
+    if (steep) {
+        uint16_t temp;
+        temp = x1; x1 = y1; y1 = temp;
+        temp = x2; x2 = y2; y2 = temp;
+    }
+    if (x1 > x2) {
+        uint16_t temp;
+        temp = x1; x1 = x2; x2 = temp;
+        temp = y1; y1 = y2; y2 = temp;
+    }
+    int16_t dx = x2 - x1;
+    int16_t dy = abs(y2 - y1);
+    int16_t err = dx / 2;
+    int16_t ystep;
+    if (y1 < y2) ystep = 1;
+    else ystep = -1;
+
+    for (; x1 <= x2; x1++) {
+        if (steep) Manual_LCD_DrawPixel(y1, x1, color);
+        else Manual_LCD_DrawPixel(x1, y1, color);
+        err -= dy;
+        if (err < 0) {
+            y1 += ystep;
+            err += dx;
+        }
+    }
+}
+
+void Manual_LCD_DrawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    if ((x >= LCD_WIDTH) || (y >= LCD_HEIGHT)) return;
+    if ((x + width - 1) >= LCD_WIDTH) width = LCD_WIDTH - x;
+    if ((y + height - 1) >= LCD_HEIGHT) height = LCD_HEIGHT - y;
+
+    Manual_LCD_DrawLine(x, y, x + width - 1, y, color);
+    Manual_LCD_DrawLine(x, y + height - 1, x + width - 1, y + height - 1, color);
+    Manual_LCD_DrawLine(x, y, x, y + height - 1, color);
+    Manual_LCD_DrawLine(x + width - 1, y, x + width - 1, y + height - 1, color);
+}
+
+void Manual_LCD_FillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+    if ((x >= LCD_WIDTH) || (y >= LCD_HEIGHT)) return;
+    if ((x + width) > LCD_WIDTH) width = LCD_WIDTH - x;
+    if ((y + height) > LCD_HEIGHT) height = LCD_HEIGHT - y;
+
+    LCD_Set_Address_Window(x, y, x + width - 1, y + height - 1);
+    HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_SET);   // DC high for data
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET); // CS low to select
+
     uint8_t color_bytes[2] = {(color >> 8) & 0xFF, color & 0xFF};
     for (uint32_t i = 0; i < (uint32_t)width * height; i++) {
-        LCD_SPI_Transmit(color_bytes, 2);
+        HAL_SPI_Transmit(&hspi1, color_bytes, 2, HAL_MAX_DELAY);
     }
-    LCD_Deselect();
+    HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);   // CS high to deselect
 }
 
-/** @brief Vẽ đường viền hình chữ nhật. */
-void Manual_LCD_DrawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
-    if ((x >= ILI9341_WIDTH) || (y >= ILI9341_HEIGHT) || width == 0 || height == 0) return;
-    if ((x + width) > ILI9341_WIDTH) width = ILI9341_WIDTH - x;
-    if ((y + height) > ILI9341_HEIGHT) height = ILI9341_HEIGHT - y;
+// Basic font (5x7) - For a more complete solution, use a proper font library or a larger font array
+// This is a very simplified character drawing.
+// You should create a font.c/font.h with actual font data (e.g., extern const unsigned char font_5x7[][5];)
+// For simplicity, this example will draw a fixed pattern for 'A' and 'B', etc.
+// A proper implementation would look up character data in a font table.
+// Placeholder for font data - you need to define this
+extern const unsigned char Font5x7[][5]; // Example: needs to be defined in font.c
 
-    Manual_LCD_FillRectangle(x, y, width, 1, color); // Top
-    Manual_LCD_FillRectangle(x, y + height - 1, width, 1, color); // Bottom
-    if (height > 2) {
-        Manual_LCD_FillRectangle(x, y + 1, 1, height - 2, color); // Left
-        Manual_LCD_FillRectangle(x + width - 1, y + 1, 1, height - 2, color); // Right
-    } else if (height == 2) {}
-}
+void Manual_LCD_DrawChar(uint16_t x, uint16_t y, char c, uint16_t charColor, uint16_t bgColor, uint8_t size) {
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT || (x + 5 * size) > LCD_WIDTH || (y + 7 * size) > LCD_HEIGHT) {
+        return; // Character won't fit
+    }
 
-/** @brief Vẽ một ký tự (sử dụng font lưu theo cột dọc, uint8_t). */
-void Manual_LCD_DrawChar(uint16_t x, uint16_t y, char character, Manual_FontDef font, uint16_t color, uint16_t bgcolor) {
-    uint16_t i, j;
-    const uint8_t *font_char_ptr;
+    if (c < ' ' || c > '~') c = '?'; // Handle non-printable characters
 
-    if (character < ' ' || character > '~') character = '?';
-
-    font_char_ptr = &font.table[(character - ' ') * font.Width];
-
-    if ((x + font.Width > ILI9341_WIDTH) || (y + font.Height > ILI9341_HEIGHT)) return;
-
-    Manual_LCD_SetWindow(x, y, x + font.Width - 1, y + font.Height - 1);
-
-    LCD_Select();
-    LCD_SetDataMode();
-
-    for (j = 0; j < font.Width; j++) { // Duyệt qua từng cột
-        uint8_t column_bitmap = font_char_ptr[j];
-        for (i = 0; i < font.Height; i++) { // Duyệt qua từng pixel trong cột
-            if ((column_bitmap >> i) & 0x01) { // Kiểm tra bit (bit 0 là trên cùng)
-                LCD_WriteData16(color);
+    for (uint8_t i = 0; i < 5; i++) { // Width of char
+        uint8_t line = Font5x7[c - ' '][i];
+        for (uint8_t j = 0; j < 7; j++) { // Height of char
+            if (line & 0x01) { // Check bit
+                if (size == 1) {
+                    Manual_LCD_DrawPixel(x + i, y + j, charColor);
+                } else {
+                    Manual_LCD_FillRectangle(x + i * size, y + j * size, size, size, charColor);
+                }
             } else {
-                LCD_WriteData16(bgcolor);
+                 if (size == 1) {
+                    Manual_LCD_DrawPixel(x + i, y + j, bgColor);
+                 } else {
+                    Manual_LCD_FillRectangle(x + i * size, y + j * size, size, size, bgColor);
+                 }
             }
+            line >>= 1;
         }
     }
-
-    LCD_Deselect();
+     // Draw a small gap for characters if size > 1 or if you want background fill for the gap
+    if (size > 0) { // Fill the column after the character (for spacing)
+        Manual_LCD_FillRectangle(x + 5 * size, y, size, 7 * size, bgColor);
+    }
 }
 
-/** @brief Vẽ một chuỗi ký tự. */
-void Manual_LCD_WriteString(uint16_t x, uint16_t y, const char *str, Manual_FontDef font, uint16_t color, uint16_t bgcolor) {
-    while (*str != '\0') {
-        if (x > (ILI9341_WIDTH - font.Width)) {
+
+void Manual_LCD_DrawString(uint16_t x, uint16_t y, const char *str, uint16_t charColor, uint16_t bgColor, uint8_t size) {
+    while (*str) {
+        Manual_LCD_DrawChar(x, y, *str, charColor, bgColor, size);
+        x += 6 * size; // Advance X position (5 for char + 1 for spacing)
+        if (x + 5 * size >= LCD_WIDTH) { // Simple wrap
             x = 0;
-            y += font.Height;
-            if (y > (ILI9341_HEIGHT - font.Height)) break;
+            y += 8 * size; // Advance Y position
         }
-        Manual_LCD_DrawChar(x, y, *str, font, color, bgcolor);
-        x += font.Width;
+        if (y + 7 * size >= LCD_HEIGHT) break; // Out of screen
         str++;
     }
 }
 
-/** @brief Vẽ toàn bộ giao diện mẫu. */
 void Manual_LCD_DrawLayout(void) {
-    Manual_LCD_FillScreen(COLOR_BACKGROUND); // Nền xanh
+    // Clear screen with blue background
+    Manual_LCD_Clear(COLOR_BLUE);
 
-    // Khung trên cùng
-    Manual_LCD_FillRectangle(TOP_RECT_X, TOP_RECT_Y, TOP_RECT_W, TOP_RECT_H, COLOR_RECT_FILL);
-    Manual_LCD_DrawRectangle(TOP_RECT_X, TOP_RECT_Y, TOP_RECT_W, TOP_RECT_H, COLOR_RECT_BORDER);
-    Manual_LCD_WriteString(TOP_RECT_X + 10, TOP_RECT_Y + (TOP_RECT_H - Font8.Height)/2 + 2, "1111 1111", Font8, COLOR_TEXT, COLOR_RECT_FILL);
+    uint16_t text_color =  COLOR_WHITE;
+    uint16_t box_fill_color = COLOR_BLACK;
+    uint16_t box_border_color = COLOR_WHITE;
+    uint8_t font_size = 1;
+    uint8_t char_height = 7; // For 5x7 font at size 1
+    // uint8_t char_width_with_spacing = 6; // For 5x7 font at size 1
 
-    // Khung Task 02-1
-    Manual_LCD_FillRectangle(MID_RECT_X1, MID_RECT_Y1, MID_RECT_W, MID_RECT_H, COLOR_RECT_FILL);
-    Manual_LCD_DrawRectangle(MID_RECT_X1, MID_RECT_Y1, MID_RECT_W, MID_RECT_H, COLOR_RECT_BORDER);
-    Manual_LCD_WriteString(MID_RECT_X1 + 10, MID_RECT_Y1 + (MID_RECT_H - Font8.Height)/2 , "Task 02-1", Font8, COLOR_TEXT, COLOR_RECT_FILL);
+    // 1. Top Info Box: "Nhom: [nhom 01]"
+    uint16_t info_box_x = 10;
+    uint16_t info_box_y = 10;
+    uint16_t info_box_w = 150;
+    uint16_t info_box_h = 30;
+    const char *info_text = "Nhom: [nhom 01]";
+    uint16_t info_text_x = info_box_x + 5;
+    uint16_t info_text_y = info_box_y + (info_box_h - char_height * font_size) / 2;
 
-    // Khung Task 02-2
-    Manual_LCD_FillRectangle(MID_RECT_X2, MID_RECT_Y1, MID_RECT_W, MID_RECT_H, COLOR_RECT_FILL);
-    Manual_LCD_DrawRectangle(MID_RECT_X2, MID_RECT_Y1, MID_RECT_W, MID_RECT_H, COLOR_RECT_BORDER);
-    Manual_LCD_WriteString(MID_RECT_X2 + 10, MID_RECT_Y1 + (MID_RECT_H - Font8.Height)/2 , "Task 02-2", Font8, COLOR_TEXT, COLOR_RECT_FILL);
+    Manual_LCD_FillRectangle(info_box_x, info_box_y, info_box_w, info_box_h, box_fill_color);
+    Manual_LCD_DrawRectangle(info_box_x, info_box_y, info_box_w, info_box_h, box_border_color);
+    Manual_LCD_DrawString(info_text_x, info_text_y, info_text, text_color, box_fill_color, font_size);
 
-    // Khung Task 02-3
-    Manual_LCD_FillRectangle(MID_RECT_X1, MID_RECT_Y2, MID_RECT_W, MID_RECT_H, COLOR_RECT_FILL);
-    Manual_LCD_DrawRectangle(MID_RECT_X1, MID_RECT_Y2, MID_RECT_W, MID_RECT_H, COLOR_RECT_BORDER);
-    Manual_LCD_WriteString(MID_RECT_X1 + 10, MID_RECT_Y2 + (MID_RECT_H - Font8.Height)/2 , "Task 02-3", Font8, COLOR_TEXT, COLOR_RECT_FILL);
+    // 2. Task Boxes Grid
+    uint16_t margin = 15;
+    uint16_t spacing_between_boxes = 10;
+    uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
+    uint16_t task_box_h = 70;
+    uint16_t start_y_tasks_row1 = info_box_y + info_box_h + 20;
+    uint16_t text_task_x_padding = 10; // Left padding for text inside task boxes
+    uint16_t text_task_y_offset = (task_box_h - char_height * font_size) / 2;
 
-    // Khung Task 02-4
-    Manual_LCD_FillRectangle(MID_RECT_X2, MID_RECT_Y2, MID_RECT_W, MID_RECT_H, COLOR_RECT_FILL);
-    Manual_LCD_DrawRectangle(MID_RECT_X2, MID_RECT_Y2, MID_RECT_W, MID_RECT_H, COLOR_RECT_BORDER);
-    Manual_LCD_WriteString(MID_RECT_X2 + 10, MID_RECT_Y2 + (MID_RECT_H - Font8.Height)/2 , "Task 02-4", Font8, COLOR_TEXT, COLOR_RECT_FILL);
+    // Task 02-1 (Top-Left)
+    uint16_t task1_x = margin;
+    uint16_t task1_y = start_y_tasks_row1;
+    const char *task1_text = "Task 02-1";
+    uint16_t text_task1_x = task1_x + text_task_x_padding;
+    uint16_t text_task1_y = task1_y + text_task_y_offset;
+    Manual_LCD_FillRectangle(task1_x, task1_y, task_box_w, task_box_h, box_fill_color);
+    Manual_LCD_DrawRectangle(task1_x, task1_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_DrawString(text_task1_x, text_task1_y, task1_text, text_color, box_fill_color, font_size);
 
-    // Khung Back
-    Manual_LCD_FillRectangle(BACK_RECT_X, BACK_RECT_Y, BACK_RECT_W, BACK_RECT_H, COLOR_RECT_FILL);
-    Manual_LCD_DrawRectangle(BACK_RECT_X, BACK_RECT_Y, BACK_RECT_W, BACK_RECT_H, COLOR_RECT_BORDER);
-    Manual_LCD_WriteString(BACK_RECT_X + 5, BACK_RECT_Y + (BACK_RECT_H - Font8.Height)/2 + 1, "<<Back", Font8, COLOR_TEXT, COLOR_RECT_FILL);
+    // Task 02-2 (Top-Right)
+    uint16_t task2_x = task1_x + task_box_w + spacing_between_boxes;
+    uint16_t task2_y = start_y_tasks_row1;
+    const char *task2_text = "Task 02-2";
+    uint16_t text_task2_x = task2_x + text_task_x_padding;
+    uint16_t text_task2_y = task2_y + text_task_y_offset;
+    Manual_LCD_FillRectangle(task2_x, task2_y, task_box_w, task_box_h, box_fill_color);
+    Manual_LCD_DrawRectangle(task2_x, task2_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_DrawString(text_task2_x, text_task2_y, task2_text, text_color, box_fill_color, font_size);
+
+    // Second row of task boxes
+    uint16_t start_y_tasks_row2 = start_y_tasks_row1 + task_box_h + spacing_between_boxes;
+
+    // Task 02-3 (Bottom-Left)
+    uint16_t task3_x = margin;
+    uint16_t task3_y = start_y_tasks_row2;
+    const char *task3_text = "Task 02-3";
+    uint16_t text_task3_x = task3_x + text_task_x_padding;
+    uint16_t text_task3_y = task3_y + text_task_y_offset;
+    Manual_LCD_FillRectangle(task3_x, task3_y, task_box_w, task_box_h, box_fill_color);
+    Manual_LCD_DrawRectangle(task3_x, task3_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_DrawString(text_task3_x, text_task3_y, task3_text, text_color, box_fill_color, font_size);
+
+    // Task 02-4 (Bottom-Right)
+    uint16_t task4_x = task1_x + task_box_w + spacing_between_boxes;
+    uint16_t task4_y = start_y_tasks_row2;
+    const char *task4_text = "Task 02-4";
+    uint16_t text_task4_x = task4_x + text_task_x_padding;
+    uint16_t text_task4_y = task4_y + text_task_y_offset;
+    Manual_LCD_FillRectangle(task4_x, task4_y, task_box_w, task_box_h, box_fill_color);
+    Manual_LCD_DrawRectangle(task4_x, task4_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_DrawString(text_task4_x, text_task4_y, task4_text, text_color, box_fill_color, font_size);
+
+    // 3. Back Button
+    uint16_t back_button_h = 30;
+    uint16_t back_button_w = 90;
+    const char *back_button_text = "<<Back";
+    uint16_t back_button_text_len = strlen(back_button_text);
+    uint16_t back_button_text_pixel_width = back_button_text_len * 6 * font_size; // 6 is char width with spacing for 5x7 font
+
+    uint16_t back_button_y = start_y_tasks_row2 + task_box_h + 20;
+    uint16_t back_button_x = LCD_WIDTH - margin - back_button_w;
+
+    uint16_t text_button_x = back_button_x + (back_button_w - back_button_text_pixel_width) / 2;
+    uint16_t text_button_y = back_button_y + (back_button_h - char_height * font_size) / 2;
+
+    Manual_LCD_FillRectangle(back_button_x, back_button_y, back_button_w, back_button_h, box_fill_color);
+    Manual_LCD_DrawRectangle(back_button_x, back_button_y, back_button_w, back_button_h, box_border_color);
+    Manual_LCD_DrawString(text_button_x, text_button_y, back_button_text, text_color, box_fill_color, font_size);
 }
 
-
-/* Private functions ---------------------------------------------------------*/
-// Định nghĩa các hàm static helper
-
-/** @brief Kéo chân CS xuống thấp để chọn LCD. */
-static void LCD_Select(void) {
-    HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, GPIO_PIN_RESET);
-}
-
-/** @brief Kéo chân CS lên cao để bỏ chọn LCD. */
-static void LCD_Deselect(void) {
-    HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, GPIO_PIN_SET);
-}
-
-/** @brief Đặt chân DC lên cao (Chế độ gửi Dữ liệu). */
-static void LCD_SetDataMode(void) {
-    HAL_GPIO_WritePin(LCD_DC_PORT, LCD_DC_PIN, GPIO_PIN_SET);
-}
-
-/** @brief Đặt chân DC xuống thấp (Chế độ gửi Lệnh). */
-static void LCD_SetCommandMode(void) {
-    HAL_GPIO_WritePin(LCD_DC_PORT, LCD_DC_PIN, GPIO_PIN_RESET);
-}
-
-/** @brief Thực hiện reset cứng cho LCD. */
-static void LCD_Reset(void) {
-    LCD_Deselect();
-    HAL_GPIO_WritePin(LCD_RST_PORT, LCD_RST_PIN, GPIO_PIN_RESET);
-    HAL_Delay(15);
-    HAL_GPIO_WritePin(LCD_RST_PORT, LCD_RST_PIN, GPIO_PIN_SET);
-    HAL_Delay(50);
-}
-
-/** @brief Gửi dữ liệu qua SPI (hàm bao bọc HAL blocking). */
-static HAL_StatusTypeDef LCD_SPI_Transmit(uint8_t *pData, uint16_t Size) {
-    return HAL_SPI_Transmit(LCD_SPI_HANDLE, pData, Size, HAL_MAX_DELAY);
-}
-
-/** @brief Gửi một byte lệnh tới LCD. */
-static void LCD_SendCommand(uint8_t cmd) {
-    LCD_Select();
-    LCD_SetCommandMode();
-    LCD_SPI_Transmit(&cmd, 1);
-    LCD_Deselect();
-}
-
-/** @brief Gửi một byte dữ liệu tới LCD. */
-static void LCD_SendData(uint8_t data) {
-    LCD_Select();
-    LCD_SetDataMode();
-    LCD_SPI_Transmit(&data, 1);
-    LCD_Deselect();
-}
-
-/** @brief Gửi một buffer dữ liệu tới LCD. */
-static void LCD_SendDataBuffer(uint8_t *pData, uint16_t Size) {
-    LCD_Select();
-    LCD_SetDataMode();
-    LCD_SPI_Transmit(pData, Size);
-    LCD_Deselect();
-}
-
-/** @brief Gửi một giá trị màu 16-bit (2 byte) qua SPI. (Nội bộ) */
-static void LCD_WriteData16(uint16_t data) {
-    uint8_t bytes[2];
-    bytes[0] = (data >> 8) & 0xFF; // MSB
-    bytes[1] = data & 0xFF;        // LSB
-    LCD_SPI_Transmit(bytes, 2);
-}
