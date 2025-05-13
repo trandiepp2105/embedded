@@ -28,10 +28,19 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
+#include <stdbool.h> // For bool type
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+// Define Task Box structure
+typedef struct
+{
+  uint16_t x;
+  uint16_t y;
+  uint16_t w;
+  uint16_t h;
+  const char *name;
+} TaskBox_t;
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

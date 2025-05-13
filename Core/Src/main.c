@@ -19,7 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "manual_lcd.h" // Include the manual LCD driver
-#include <string.h>     // Cho hàm strlen() và strcmp()
+#include "manual_touch.h"
+#include <stdio.h>
+#include <string.h> // Cho hàm strlen() và strcmp()
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -63,7 +65,27 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+  // Task Box Definitions
+  uint16_t margin = 15;
+  uint16_t spacing_between_boxes = 10;
+  // Assuming LCD_WIDTH is 240 and LCD_HEIGHT is 320 from manual_lcd.h
+  // If LCD_WIDTH is not 240, task_box_w calculation will be incorrect.
+  uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
+  uint16_t task_box_h = 70;
+  uint16_t info_box_y = 10;
+  uint16_t info_box_h = 30;
+  uint16_t start_y_tasks_row1 = info_box_y + info_box_h + 20;
+  uint16_t start_y_tasks_row2 = start_y_tasks_row1 + task_box_h + spacing_between_boxes;
 
+  TaskBox_t task_boxes[] = {
+      {margin, start_y_tasks_row1, task_box_w, task_box_h, "Task 02-1"},
+      {(uint16_t)(margin + task_box_w + spacing_between_boxes), start_y_tasks_row1, task_box_w, task_box_h, "Task 02-2"},
+      {margin, start_y_tasks_row2, task_box_w, task_box_h, "Task 02-3"},
+      {(uint16_t)(margin + task_box_w + spacing_between_boxes), start_y_tasks_row2, task_box_w, task_box_h, "Task 02-4"}};
+  const int num_tasks = sizeof(task_boxes) / sizeof(task_boxes[0]);
+  int highlighted_task_index = -1;
+  char info_text_buffer[50];
+  Coordinate rawPoint, displayPoint;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -86,14 +108,66 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_I2C2_Init();
-  Manual_LCD_Init();       // Initialize the LCD using the manual driver
-  Manual_LCD_DrawLayout(); // Draw the predefined layout
+  Manual_LCD_Init();
+  Manual_Touch_Init(&hspi1);
 
+  // Temporarily COMMENT OUT calibration for testing basic touch functionality
+  /*
+  Manual_LCD_Clear(COLOR_BLACK);                                                                        // Clear screen before calibration messages
+  Manual_LCD_DrawString(10, LCD_HEIGHT / 2 - 20, "Calibrating Touch...", COLOR_WHITE, COLOR_BLACK, 1);  // Adjusted Y for better spacing
+  Manual_LCD_DrawString(10, LCD_HEIGHT / 2, "Tap points as they appear.", COLOR_WHITE, COLOR_BLACK, 1); // Adjusted Y
+  HAL_Delay(1500);                                                                                      // Give user a bit more time to read message
+  Manual_Touch_Calibrate(COLOR_YELLOW, COLOR_BLACK); // This is where it might hang
+  Manual_LCD_Clear(COLOR_BLACK); // Clear screen after calibration UI
+  */
+
+  Manual_LCD_Clear(COLOR_BLACK); // Clear the screen for the test
+  Manual_LCD_DrawLayout();       // Draw the main layout (or a simpler test screen if preferred)
+
+  // Initial Info Text for testing
+  sprintf(info_text_buffer, "Touch Test Mode");
+  Manual_LCD_UpdateInfoText(info_text_buffer);
+
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // The layout is static, so no need to redraw in the loop unless it changes
-    HAL_Delay(1000); // Keep the MCU busy or add other tasks
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    if (Manual_Touch_Pressed())
+    {
+      if (Manual_Touch_GetRawPoint(&rawPoint))
+      {
+        // Display raw touch coordinates in the info box
+        sprintf(info_text_buffer, "Raw: X=%03u Y=%03u", rawPoint.x, rawPoint.y);
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+
+        // Wait for touch release to prevent continuous updates for a single press
+        while (Manual_Touch_Pressed())
+        {
+          HAL_Delay(20); // Small delay
+        }
+        // Optionally, update info text after release
+        sprintf(info_text_buffer, "Released. Tap again.");
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+        HAL_Delay(500);                               // Show release message briefly
+        sprintf(info_text_buffer, "Touch Test Mode"); // Revert to default test message
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+      }
+      else
+      {
+        // Manual_Touch_Pressed() was true, but GetRawPoint failed
+        sprintf(info_text_buffer, "Pressed, GetPoint Fail");
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+        while (Manual_Touch_Pressed())
+        {
+          HAL_Delay(20);
+        }
+      }
+    }
+    HAL_Delay(50); // Polling delay for touch checks
   }
+  /* USER CODE END 3 */
 }
 
 /**
@@ -231,10 +305,10 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_RESET);
+  /*Configure GPIO pin Output Level for TP_CS to be deselected initially */
+  HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET); // TP_CS high (deselected)
 
-  /*Configure GPIO pin : PA1 */
+  /*Configure GPIO pin : PA1 (Nếu bạn không dùng, có thể bỏ qua) */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
@@ -244,25 +318,27 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH; // Tăng tốc độ cho các chân LCD SPI
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : TP_CS_Pin */
   GPIO_InitStruct.Pin = TP_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH; // Tăng tốc độ cho TP_CS
   HAL_GPIO_Init(TP_CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : TP_IRQ_Pin */
+  /*Configure GPIO pin : TP_IRQ_Pin (Cấu hình cho polling) */
   GPIO_InitStruct.Pin = TP_IRQ_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT; // Input để đọc trạng thái
+  GPIO_InitStruct.Pull = GPIO_PULLUP;     // Kéo lên vì TP_IRQ là active-low
   HAL_GPIO_Init(TP_IRQ_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
+  /* EXTI interrupt init - Bỏ qua nếu dùng polling cho TP_IRQ */
+  /*
   HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+  */
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

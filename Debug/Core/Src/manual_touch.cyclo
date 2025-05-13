@@ -1,0 +1,9 @@
+../Core/Src/manual_touch.c:23:17:TP_Read_ADC_Raw	1
+../Core/Src/manual_touch.c:47:6:Manual_Touch_Init	1
+../Core/Src/manual_touch.c:55:9:Manual_Touch_Pressed	1
+../Core/Src/manual_touch.c:61:9:Manual_Touch_GetRawPoint	30
+../Core/Src/manual_touch.c:146:16:CalculateCalibrationMatrix	2
+../Core/Src/manual_touch.c:171:9:Manual_Touch_ApplyCalibration	4
+../Core/Src/manual_touch.c:203:13:DrawCalibrationCross	1
+../Core/Src/manual_touch.c:210:6:Manual_Touch_Calibrate	4
+../Core/Src/manual_touch.c:258:6:Manual_Touch_SetFixedCalibration	2
