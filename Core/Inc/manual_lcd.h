@@ -1,12 +1,14 @@
 #ifndef __MANUAL_LCD_H
 #define __MANUAL_LCD_H
 
+#include <stdint.h> // Ensure standard types are defined
+#include "stm32f4xx_hal.h" // Moved up to ensure types are defined
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#include "stm32f4xx_hal.h"
 #include "main.h" // To access GPIO definitions and SPI handle
 
 // Define LCD screen dimensions
@@ -22,6 +24,19 @@ extern "C"
 #define COLOR_MAGENTA 0xF81F
 #define COLOR_YELLOW 0xFFE0
 #define COLOR_WHITE 0xFFFF
+
+// Define layout constants
+#define MARGIN 10
+#define SPACING_BETWEEN_BOXES 10
+#define TASK_BOX_W_CALC ((LCD_WIDTH - 2 * MARGIN - SPACING_BETWEEN_BOXES) / 2)
+#define TASK_BOX_H 70
+#define INFO_BOX_Y 10
+#define INFO_BOX_H 30
+#define INFO_BOX_W 150 // Standardized width for the info box
+#define BACK_BUTTON_H 45
+#define BACK_BUTTON_W 90 // Standardized width for the back button as per main.c
+#define INFO_TO_TASK_SPACING 20
+#define TASK_TO_BACK_BUTTON_SPACING 20
 
     // Exported functions
     void Manual_LCD_Init(void);

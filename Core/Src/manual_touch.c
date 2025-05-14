@@ -15,9 +15,6 @@ Coordinate DefaultCalDisplaySample[3] = {
 };
 Coordinate CalScreenSample[3]; // Raw ADC values from touch panel for calibration points
 
-#define TOUCH_AVG_SAMPLES 9
-#define TOUCH_RAW_THRESHOLD 35 // Increased from 20 to 35
-
 // Low-level SPI communication for touch
 // Sends 1 byte command, receives 2 bytes data (12-bit ADC value)
 static uint16_t TP_Read_ADC_Raw(uint8_t cmd)
@@ -173,8 +170,8 @@ uint8_t Manual_Touch_ApplyCalibration(Coordinate *displayPoint, const Coordinate
     if (touchMatrix.Divider == 0)
     { // Not calibrated or calibration failed
         // Fallback: direct scaling (highly inaccurate without calibration)
-        displayPoint->x = (uint16_t)(((long)screenPoint->x * LCD_HEIGHT) / 4095 - 20);
-        displayPoint->y = (uint16_t)(((long)screenPoint->y * LCD_WIDTH) / 4095 - 20);
+        displayPoint->x = (uint16_t)(((long)screenPoint->x * LCD_WIDTH) / 4095);
+        displayPoint->y = (uint16_t)(((long)screenPoint->y * LCD_HEIGHT) / 4095);
         return 0; // Indicated that calibration matrix was not used
     }
 

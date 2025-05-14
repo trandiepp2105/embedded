@@ -68,35 +68,26 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   // Task Box Definitions
-  uint16_t margin = 10;
-  uint16_t spacing_between_boxes = 10;
-  // Assuming LCD_WIDTH is 240 and LCD_HEIGHT is 320 from manual_lcd.h
-  // If LCD_WIDTH is not 240, task_box_w calculation will be incorrect.
-  uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
-  uint16_t task_box_h = 70;
-  uint16_t info_box_x = 20;
-  uint16_t info_box_h = 30;
-  uint16_t start_x_tasks_row1 = info_box_x + info_box_h + 20;
-  uint16_t start_x_tasks_row2 = start_x_tasks_row1 + task_box_h + spacing_between_boxes;
+  uint16_t start_y_tasks_row1 = INFO_BOX_Y + INFO_BOX_H + INFO_TO_TASK_SPACING;
+  uint16_t start_y_tasks_row2 = start_y_tasks_row1 + TASK_BOX_H + SPACING_BETWEEN_BOXES;
 
   TaskBox_t task_boxes[] = {
-      {start_x_tasks_row1, margin, task_box_w, task_box_h, "Task 02-1"},
-      {start_x_tasks_row1, (uint16_t)(margin + task_box_w + spacing_between_boxes), task_box_w, task_box_h, "Task 02-2"},
-      {start_x_tasks_row2, margin, task_box_w, task_box_h, "Task 02-3"},
-      {start_x_tasks_row2, (uint16_t)(margin + task_box_w + spacing_between_boxes), task_box_w, task_box_h, "Task 02-4"}};
+      {MARGIN, start_y_tasks_row1, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-1"},
+      {(uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), start_y_tasks_row1, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-2"},
+      {MARGIN, start_y_tasks_row2, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-3"},
+      {(uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), start_y_tasks_row2, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-4"}};
   const int num_tasks = sizeof(task_boxes) / sizeof(task_boxes[0]);
   // int highlighted_task_index = -1; // Not currently used
   char info_text_buffer[50];
+  char current_task_text[20];
   Coordinate rawPoint, displayPoint;
 
   // Define the Back Button Box (ADJUST x, y, w, h AS PER YOUR Manual_LCD_DrawLayout)
-  uint16_t back_button_h = 45;
-  uint16_t back_button_w = 90; // Example height for back button
   TaskBox_t back_button_box = {
-      (uint16_t)(start_x_tasks_row2 + task_box_h + 20),        // x: same margin as tasks
-      (uint16_t)(margin + task_box_w + spacing_between_boxes), // y: towards the bottom
-      back_button_w,                                           // w: span most of the width
-      back_button_h,                                           // h: defined height
+      (uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), // x: same margin as tasks
+      (uint16_t)(start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING),        // y: towards the bottom
+      BACK_BUTTON_W,                                           // w: span most of the width
+      BACK_BUTTON_H,                                           // h: defined height
       "Back"                                                   // name (used for internal logic if needed, not displayed by default)
   };
   /* USER CODE END 1 */
@@ -128,23 +119,6 @@ int main(void)
   Manual_LCD_DrawLayout(); // This function should draw the tasks and the back button
 
   /* USER CODE BEGIN WHILE */
-  // while (1)
-  // {
-  //   /* USER CODE END WHILE */
-
-  //   /* USER CODE BEGIN 3 */
-  //   if (Manual_Touch_Pressed())
-  //   {
-  //     if (Manual_Touch_GetRawPoint(&rawPoint))
-  //     {
-
-  //       Manual_Touch_ApplyCalibration(&displayPoint, &rawPoint);
-  //       sprintf(info_text_buffer, "Touch: X=%03u Y=%03u", displayPoint.x, displayPoint.y);
-  //       Manual_LCD_UpdateInfoText(info_text_buffer);
-  //     }
-  //   }
-  // }
-
   while (1)
   {
     /* USER CODE END WHILE */
@@ -176,7 +150,22 @@ int main(void)
 
         if (task_hit_index != -1)
         {
-          sprintf(info_text_buffer, "Task: %s", task_boxes[task_hit_index].name);
+          // reset fill color of previous task box(using current_task_text)
+          if (strlen(current_task_text) > 0)
+          {
+            if (strcmp(current_task_text, task_boxes[task_hit_index].name) != 0)
+            {
+              Manual_LCD_RefillTaskBox(current_task_text, COLOR_BLACK);                 // Refill the task box with red color
+              Manual_LCD_RefillTaskBox(task_boxes[task_hit_index].name, COLOR_MAGENTA); // Refill the task box with red color
+            }
+          }
+          else
+          {
+            Manual_LCD_RefillTaskBox(task_boxes[task_hit_index].name, COLOR_MAGENTA); // Refill the task box with red color
+          }
+          strcpy(current_task_text, task_boxes[task_hit_index].name); // Update current task text
+
+          // sprintf(info_text_buffer, "Task: %s", task_boxes[task_hit_index].name);
         }
         else if (back_button_pressed)
         {

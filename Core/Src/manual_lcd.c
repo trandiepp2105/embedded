@@ -396,108 +396,92 @@ void Manual_LCD_DrawLayout(void)
     // uint8_t char_width_with_spacing = 6; // For 5x7 font at size 1
 
     // 1. Top Info Box: "Nhom: [nhom 01]"
-    uint16_t info_box_x = 10;
-    uint16_t info_box_y = 20;
-    uint16_t info_box_w = 150;
-    uint16_t info_box_h = 30;
     const char *info_text = "Nhom: [nhom 01]";
-    uint16_t info_text_x = info_box_x + 5;
-    uint16_t info_text_y = info_box_y + (info_box_h - char_height * font_size) / 2;
+    uint16_t info_text_x = MARGIN + 5;
+    uint16_t info_text_y = INFO_BOX_Y + (INFO_BOX_H - char_height * font_size) / 2;
 
-    Manual_LCD_FillRectangle(info_box_x, info_box_y, info_box_w, info_box_h, box_fill_color);
-    Manual_LCD_DrawRectangle(info_box_x, info_box_y, info_box_w, info_box_h, box_border_color);
+    Manual_LCD_FillRectangle(MARGIN, INFO_BOX_Y, INFO_BOX_W, INFO_BOX_H, box_fill_color);
+    Manual_LCD_DrawRectangle(MARGIN, INFO_BOX_Y, INFO_BOX_W, INFO_BOX_H, box_border_color);
     Manual_LCD_DrawString(info_text_x, info_text_y, info_text, text_color, box_fill_color, font_size);
 
     // 2. Task Boxes Grid
-    uint16_t margin = 10;
-    uint16_t spacing_between_boxes = 10;
-    uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
-    uint16_t task_box_h = 70;
-    uint16_t start_y_tasks_row1 = info_box_y + info_box_h + 20;
+    uint16_t start_y_tasks_row1 = INFO_BOX_Y + INFO_BOX_H + INFO_TO_TASK_SPACING;
     uint16_t text_task_x_padding = 10; // Left padding for text inside task boxes
-    uint16_t text_task_y_offset = (task_box_h - char_height * font_size) / 2;
+    uint16_t text_task_y_offset = (TASK_BOX_H - char_height * font_size) / 2;
 
     // Task 02-1 (Top-Left)
-    uint16_t task1_x = margin;
+    uint16_t task1_x = MARGIN;
     uint16_t task1_y = start_y_tasks_row1;
     const char *task1_text = "Task 02-1";
     uint16_t text_task1_x = task1_x + text_task_x_padding;
     uint16_t text_task1_y = task1_y + text_task_y_offset;
-    Manual_LCD_FillRectangle(task1_x, task1_y, task_box_w, task_box_h, box_fill_color);
-    Manual_LCD_DrawRectangle(task1_x, task1_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_FillRectangle(task1_x, task1_y, TASK_BOX_W_CALC, TASK_BOX_H, box_fill_color);
+    Manual_LCD_DrawRectangle(task1_x, task1_y, TASK_BOX_W_CALC, TASK_BOX_H, box_border_color);
     Manual_LCD_DrawString(text_task1_x, text_task1_y, task1_text, text_color, box_fill_color, font_size);
 
     // Task 02-2 (Top-Right)
-    uint16_t task2_x = task1_x + task_box_w + spacing_between_boxes;
+    uint16_t task2_x = task1_x + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES;
     uint16_t task2_y = start_y_tasks_row1;
     const char *task2_text = "Task 02-2";
     uint16_t text_task2_x = task2_x + text_task_x_padding;
     uint16_t text_task2_y = task2_y + text_task_y_offset;
-    Manual_LCD_FillRectangle(task2_x, task2_y, task_box_w, task_box_h, box_fill_color);
-    Manual_LCD_DrawRectangle(task2_x, task2_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_FillRectangle(task2_x, task2_y, TASK_BOX_W_CALC, TASK_BOX_H, box_fill_color);
+    Manual_LCD_DrawRectangle(task2_x, task2_y, TASK_BOX_W_CALC, TASK_BOX_H, box_border_color);
     Manual_LCD_DrawString(text_task2_x, text_task2_y, task2_text, text_color, box_fill_color, font_size);
 
     // Second row of task boxes
-    uint16_t start_y_tasks_row2 = start_y_tasks_row1 + task_box_h + spacing_between_boxes;
+    uint16_t start_y_tasks_row2 = start_y_tasks_row1 + TASK_BOX_H + SPACING_BETWEEN_BOXES;
 
     // Task 02-3 (Bottom-Left)
-    uint16_t task3_x = margin;
+    uint16_t task3_x = MARGIN;
     uint16_t task3_y = start_y_tasks_row2;
     const char *task3_text = "Task 02-3";
     uint16_t text_task3_x = task3_x + text_task_x_padding;
     uint16_t text_task3_y = task3_y + text_task_y_offset;
-    Manual_LCD_FillRectangle(task3_x, task3_y, task_box_w, task_box_h, box_fill_color);
-    Manual_LCD_DrawRectangle(task3_x, task3_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_FillRectangle(task3_x, task3_y, TASK_BOX_W_CALC, TASK_BOX_H, box_fill_color);
+    Manual_LCD_DrawRectangle(task3_x, task3_y, TASK_BOX_W_CALC, TASK_BOX_H, box_border_color);
     Manual_LCD_DrawString(text_task3_x, text_task3_y, task3_text, text_color, box_fill_color, font_size);
 
     // Task 02-4 (Bottom-Right)
-    uint16_t task4_x = task1_x + task_box_w + spacing_between_boxes;
+    uint16_t task4_x = task1_x + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES;
     uint16_t task4_y = start_y_tasks_row2;
     const char *task4_text = "Task 02-4";
     uint16_t text_task4_x = task4_x + text_task_x_padding;
     uint16_t text_task4_y = task4_y + text_task_y_offset;
-    Manual_LCD_FillRectangle(task4_x, task4_y, task_box_w, task_box_h, box_fill_color);
-    Manual_LCD_DrawRectangle(task4_x, task4_y, task_box_w, task_box_h, box_border_color);
+    Manual_LCD_FillRectangle(task4_x, task4_y, TASK_BOX_W_CALC, TASK_BOX_H, box_fill_color);
+    Manual_LCD_DrawRectangle(task4_x, task4_y, TASK_BOX_W_CALC, TASK_BOX_H, box_border_color);
     Manual_LCD_DrawString(text_task4_x, text_task4_y, task4_text, text_color, box_fill_color, font_size);
 
     // 3. Back Button
-    uint16_t back_button_h = 45;
-    uint16_t back_button_w = task_box_w;
     const char *back_button_text = "<<Back";
     uint16_t back_button_text_len = strlen(back_button_text);
     uint16_t back_button_text_pixel_width = back_button_text_len * 6 * font_size; // 6 is char width with spacing for 5x7 font
 
-    uint16_t back_button_y = start_y_tasks_row2 + task_box_h + 20;
-    uint16_t back_button_x = LCD_WIDTH - margin - back_button_w;
+    uint16_t back_button_y = start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING;
 
-    uint16_t text_button_x = back_button_x + (back_button_w - back_button_text_pixel_width) / 2;
-    uint16_t text_button_y = back_button_y + (back_button_h - char_height * font_size) / 2;
+    uint16_t text_button_x = BACK_BUTTON_X_CALC + (BACK_BUTTON_W_CALC - back_button_text_pixel_width) / 2;
+    uint16_t text_button_y = back_button_y + (BACK_BUTTON_H - char_height * font_size) / 2;
 
-    Manual_LCD_FillRectangle(back_button_x, back_button_y, back_button_w, back_button_h, box_fill_color);
-    Manual_LCD_DrawRectangle(back_button_x, back_button_y, back_button_w, back_button_h, box_border_color);
+    Manual_LCD_FillRectangle(BACK_BUTTON_X_CALC, back_button_y, BACK_BUTTON_W_CALC, BACK_BUTTON_H, box_fill_color);
+    Manual_LCD_DrawRectangle(BACK_BUTTON_X_CALC, back_button_y, BACK_BUTTON_W_CALC, BACK_BUTTON_H, box_border_color);
     Manual_LCD_DrawString(text_button_x, text_button_y, back_button_text, text_color, box_fill_color, font_size);
 }
 
 // New function to update the info text
 void Manual_LCD_UpdateInfoText(const char *new_text)
 {
-    // Parameters from Manual_LCD_DrawLayout for the Top Info Box
-    uint16_t info_box_x = 10;
-    uint16_t info_box_y = 10;
-    uint16_t info_box_w = 150;
-    uint16_t info_box_h = 30;
     uint8_t font_size = 1;
     uint8_t char_height = 7; // For 5x7 font at size 1
 
     uint16_t text_color = COLOR_WHITE;     // Original text color from DrawLayout
     uint16_t box_fill_color = COLOR_BLACK; // Original box fill color from DrawLayout
 
-    uint16_t info_text_x = info_box_x + 5;
-    uint16_t info_text_y = info_box_y + (info_box_h - char_height * font_size) / 2;
+    uint16_t info_text_x = MARGIN + 5;
+    uint16_t info_text_y = INFO_BOX_Y + (INFO_BOX_H - char_height * font_size) / 2;
 
     // Clear the inner part of the info box where text resides
     // The border is 1px, so we fill from x+1, y+1 with width-2, height-2
-    Manual_LCD_FillRectangle(info_box_x + 1, info_box_y + 1, info_box_w - 2, info_box_h - 2, box_fill_color);
+    Manual_LCD_FillRectangle(MARGIN + 1, INFO_BOX_Y + 1, INFO_BOX_W - 2, INFO_BOX_H - 2, box_fill_color);
 
     // Draw the new string with original text color and original box fill as background
     Manual_LCD_DrawString(info_text_x, info_text_y, new_text, text_color, box_fill_color, font_size);
@@ -506,24 +490,13 @@ void Manual_LCD_UpdateInfoText(const char *new_text)
 // New function to refill a task box and redraw its text
 void Manual_LCD_RefillTaskBox(const char *task_name, uint16_t new_fill_color)
 {
-    // Layout parameters from Manual_LCD_DrawLayout
     uint16_t original_text_color = COLOR_WHITE;
     uint16_t original_box_border_color = COLOR_WHITE;
     uint8_t font_size = 1;
     uint8_t char_height = 7; // For 5x7 font at size 1
 
-    uint16_t margin = 15;
-    uint16_t spacing_between_boxes = 10;
-    uint16_t task_box_w = (LCD_WIDTH - 2 * margin - spacing_between_boxes) / 2;
-    uint16_t task_box_h = 70;
-
-    // Info box dimensions needed to calculate task box starting Y
-    uint16_t info_box_y_val = 10;
-    uint16_t info_box_h_val = 30;
-    uint16_t start_y_tasks_row1 = info_box_y_val + info_box_h_val + 20; // 10 + 30 + 20 = 60
-
     uint16_t text_task_x_padding = 10;
-    uint16_t text_task_y_offset = (task_box_h - char_height * font_size) / 2; // (70 - 7)/2 = 31
+    uint16_t text_task_y_offset = (TASK_BOX_H - char_height * font_size) / 2;
 
     uint16_t current_task_x = 0, current_task_y = 0;
     uint16_t text_draw_x = 0, text_draw_y = 0;
@@ -531,26 +504,26 @@ void Manual_LCD_RefillTaskBox(const char *task_name, uint16_t new_fill_color)
 
     if (strcmp(task_name, "Task 02-1") == 0)
     {
-        current_task_x = margin;
-        current_task_y = start_y_tasks_row1;
+        current_task_x = MARGIN;
+        current_task_y = INFO_BOX_Y + INFO_BOX_H + INFO_TO_TASK_SPACING;
         original_task_text_content = "Task 02-1";
     }
     else if (strcmp(task_name, "Task 02-2") == 0)
     {
-        current_task_x = margin + task_box_w + spacing_between_boxes;
-        current_task_y = start_y_tasks_row1;
+        current_task_x = MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES;
+        current_task_y = INFO_BOX_Y + INFO_BOX_H + INFO_TO_TASK_SPACING;
         original_task_text_content = "Task 02-2";
     }
     else if (strcmp(task_name, "Task 02-3") == 0)
     {
-        current_task_x = margin;
-        current_task_y = start_y_tasks_row1 + task_box_h + spacing_between_boxes;
+        current_task_x = MARGIN;
+        current_task_y = INFO_BOX_Y + INFO_BOX_H + INFO_TO_TASK_SPACING + TASK_BOX_H + SPACING_BETWEEN_BOXES;
         original_task_text_content = "Task 02-3";
     }
     else if (strcmp(task_name, "Task 02-4") == 0)
     {
-        current_task_x = margin + task_box_w + spacing_between_boxes;
-        current_task_y = start_y_tasks_row1 + task_box_h + spacing_between_boxes;
+        current_task_x = MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES;
+        current_task_y = INFO_BOX_Y + INFO_BOX_H + INFO_TO_TASK_SPACING + TASK_BOX_H + SPACING_BETWEEN_BOXES;
         original_task_text_content = "Task 02-4";
     }
     else
@@ -562,10 +535,10 @@ void Manual_LCD_RefillTaskBox(const char *task_name, uint16_t new_fill_color)
     text_draw_y = current_task_y + text_task_y_offset;
 
     // 1. Refill the entire task box with the new color
-    Manual_LCD_FillRectangle(current_task_x, current_task_y, task_box_w, task_box_h, new_fill_color);
+    Manual_LCD_FillRectangle(current_task_x, current_task_y, TASK_BOX_W_CALC, TASK_BOX_H, new_fill_color);
 
     // 2. Redraw the border
-    Manual_LCD_DrawRectangle(current_task_x, current_task_y, task_box_w, task_box_h, original_box_border_color);
+    Manual_LCD_DrawRectangle(current_task_x, current_task_y, TASK_BOX_W_CALC, TASK_BOX_H, original_box_border_color);
 
     // 3. Redraw the original text using the original text color and the new_fill_color as background
     Manual_LCD_DrawString(text_draw_x, text_draw_y, original_task_text_content, original_text_color, new_fill_color, font_size);
