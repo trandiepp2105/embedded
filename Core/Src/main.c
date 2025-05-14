@@ -84,11 +84,11 @@ int main(void)
 
   // Define the Back Button Box (ADJUST x, y, w, h AS PER YOUR Manual_LCD_DrawLayout)
   TaskBox_t back_button_box = {
-      (uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), // x: same margin as tasks
-      (uint16_t)(start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING),        // y: towards the bottom
-      BACK_BUTTON_W,                                           // w: span most of the width
-      BACK_BUTTON_H,                                           // h: defined height
-      "Back"                                                   // name (used for internal logic if needed, not displayed by default)
+      (uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES),              // x: same margin as tasks
+      (uint16_t)(start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING), // y: towards the bottom
+      BACK_BUTTON_W,                                                             // w: span most of the width
+      BACK_BUTTON_H,                                                             // h: defined height
+      "Back"                                                                     // name (used for internal logic if needed, not displayed by default)
   };
   /* USER CODE END 1 */
 
@@ -184,8 +184,6 @@ int main(void)
       }
       else
       {
-        sprintf(info_text_buffer, "Pressed, GetPoint Fail");
-        Manual_LCD_UpdateInfoText(info_text_buffer);
         while (Manual_Touch_Pressed())
         {
           HAL_Delay(20);

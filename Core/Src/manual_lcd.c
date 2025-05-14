@@ -458,12 +458,12 @@ void Manual_LCD_DrawLayout(void)
     uint16_t back_button_text_pixel_width = back_button_text_len * 6 * font_size; // 6 is char width with spacing for 5x7 font
 
     uint16_t back_button_y = start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING;
-
-    uint16_t text_button_x = BACK_BUTTON_X_CALC + (BACK_BUTTON_W_CALC - back_button_text_pixel_width) / 2;
+    uint16_t back_button_x = MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES;
+    uint16_t text_button_x = back_button_x + (BACK_BUTTON_W - back_button_text_pixel_width) / 2;
     uint16_t text_button_y = back_button_y + (BACK_BUTTON_H - char_height * font_size) / 2;
 
-    Manual_LCD_FillRectangle(BACK_BUTTON_X_CALC, back_button_y, BACK_BUTTON_W_CALC, BACK_BUTTON_H, box_fill_color);
-    Manual_LCD_DrawRectangle(BACK_BUTTON_X_CALC, back_button_y, BACK_BUTTON_W_CALC, BACK_BUTTON_H, box_border_color);
+    Manual_LCD_FillRectangle(back_button_x, back_button_y, BACK_BUTTON_W, BACK_BUTTON_H, box_fill_color);
+    Manual_LCD_DrawRectangle(back_button_x, back_button_y, BACK_BUTTON_W, BACK_BUTTON_H, box_border_color);
     Manual_LCD_DrawString(text_button_x, text_button_y, back_button_text, text_color, box_fill_color, font_size);
 }
 

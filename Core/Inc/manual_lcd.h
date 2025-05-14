@@ -1,7 +1,7 @@
 #ifndef __MANUAL_LCD_H
 #define __MANUAL_LCD_H
 
-#include <stdint.h> // Ensure standard types are defined
+#include <stdint.h>        // Ensure standard types are defined
 #include "stm32f4xx_hal.h" // Moved up to ensure types are defined
 
 #ifdef __cplusplus
