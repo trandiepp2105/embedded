@@ -88,6 +88,7 @@ void Manual_LCD_DrawCircle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
 
 void Manual_LCD_Init(void)
 {
+
     // Hardware Reset
     HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET);
     HAL_Delay(100);
@@ -204,6 +205,8 @@ void Manual_LCD_Init(void)
     LCD_Write_Cmd(0x29); // Display ON
 
     Manual_LCD_Clear(COLOR_BLACK);
+
+    // Enable touch interrupt
 }
 
 void Manual_LCD_Clear(uint16_t color)

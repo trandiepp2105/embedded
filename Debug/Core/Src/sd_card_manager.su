@@ -1,0 +1,5 @@
+../Core/Src/sd_card_manager.c:16:9:SD_Init	16	static
+../Core/Src/sd_card_manager.c:50:9:SD_WriteFile	600	static
+../Core/Src/sd_card_manager.c:89:9:SD_CreateTeamFile	64	static
+../Core/Src/sd_card_manager.c:103:5:SD_ReadFile	600	static
+../Core/Src/sd_card_manager.c:155:5:SD_ReadTeamFile	16	static

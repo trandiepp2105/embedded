@@ -64,8 +64,8 @@ all: main-build
 main-build: PROJECT_TEAM_9.elf secondary-outputs
 
 # Tool invocations
-PROJECT_TEAM_9.elf PROJECT_TEAM_9.map: $(OBJS) $(USER_OBJS) D:\PROJECT_TEAM_9\STM32F405RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "PROJECT_TEAM_9.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\PROJECT_TEAM_9\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PROJECT_TEAM_9.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+PROJECT_TEAM_9.elf PROJECT_TEAM_9.map: $(OBJS) $(USER_OBJS) D:\HK6\PRACTICE_EMBEDDED_SYSTEM\PROJECT\PROJECT_TEAM_9\STM32F405RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "PROJECT_TEAM_9.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\HK6\PRACTICE_EMBEDDED_SYSTEM\PROJECT\PROJECT_TEAM_9\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PROJECT_TEAM_9.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

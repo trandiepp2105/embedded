@@ -36,3 +36,6 @@ SourcePath#1=..\FATFS\App
 SourcePath#2=..\Core\Src
 SourceFiles=;
 
+[]
+SourceFiles=;;
+

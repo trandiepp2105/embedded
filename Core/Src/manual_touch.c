@@ -57,87 +57,99 @@ uint8_t Manual_Touch_Pressed(void)
 
 uint8_t Manual_Touch_GetRawPoint(Coordinate *rawPoint)
 {
-    if (!Manual_Touch_Pressed())
-    {
-        return 0; // Not pressed
-    }
+    // Đọc một mẫu đơn giản để debug
+    rawPoint->x = TP_Read_ADC_Raw(TP_CMD_READ_X);
+    rawPoint->y = TP_Read_ADC_Raw(TP_CMD_READ_Y);
 
-    uint16_t x_samples[TOUCH_AVG_SAMPLES];
-    uint16_t y_samples[TOUCH_AVG_SAMPLES];
-    uint8_t i;
-
-    // Read all X samples first
-    for (i = 0; i < TOUCH_AVG_SAMPLES; i++)
-    {
-        if (!Manual_Touch_Pressed() && i >= 1)
-        { // Check if pen lifted after at least one sample
-            // If pen lifted early, try to use what we have if enough samples, or fail
-            if (i < 3)
-                return 0; // Not enough samples for even one average
-            // Fill remaining samples with the last good one to avoid distorting average too much
-            for (uint8_t j = i; j < TOUCH_AVG_SAMPLES; j++)
-            {
-                x_samples[j] = x_samples[i - 1];
-            }
-            break; // Exit X sampling loop
-        }
-        x_samples[i] = TP_Read_ADC_Raw(TP_CMD_READ_X);
-        // HAL_Delay(1); // Increased delay slightly
-    }
-
-    // Read all Y samples
-    for (i = 0; i < TOUCH_AVG_SAMPLES; i++)
-    {
-        if (!Manual_Touch_Pressed() && i >= 1)
-        {
-            if (i < 3)
-                return 0;
-            for (uint8_t j = i; j < TOUCH_AVG_SAMPLES; j++)
-            {
-                y_samples[j] = y_samples[i - 1];
-            }
-            break; // Exit Y sampling loop
-        }
-        y_samples[i] = TP_Read_ADC_Raw(TP_CMD_READ_Y);
-        // HAL_Delay(2); // Increased delay slightly
-    }
-
-    // Averaging and filtering logic from original code
-    uint16_t avg_x[3], avg_y[3];
-    avg_x[0] = (x_samples[0] + x_samples[1] + x_samples[2]) / 3;
-    avg_x[1] = (x_samples[3] + x_samples[4] + x_samples[5]) / 3;
-    avg_x[2] = (x_samples[6] + x_samples[7] + x_samples[8]) / 3;
-
-    avg_y[0] = (y_samples[0] + y_samples[1] + y_samples[2]) / 3;
-    avg_y[1] = (y_samples[3] + y_samples[4] + y_samples[5]) / 3;
-    avg_y[2] = (y_samples[6] + y_samples[7] + y_samples[8]) / 3;
-
-    int16_t m0x = avg_x[0] > avg_x[1] ? avg_x[0] - avg_x[1] : avg_x[1] - avg_x[0];
-    int16_t m1x = avg_x[1] > avg_x[2] ? avg_x[1] - avg_x[2] : avg_x[2] - avg_x[1];
-    int16_t m2x = avg_x[2] > avg_x[0] ? avg_x[2] - avg_x[0] : avg_x[0] - avg_x[2];
-
-    if (m0x > TOUCH_RAW_THRESHOLD && m1x > TOUCH_RAW_THRESHOLD && m2x > TOUCH_RAW_THRESHOLD)
-        return 0; // Unstable X
-
-    if (m0x < m1x)
-        rawPoint->x = (m2x < m0x) ? (avg_x[0] + avg_x[2]) / 2 : (avg_x[0] + avg_x[1]) / 2;
-    else
-        rawPoint->x = (m2x < m1x) ? (avg_x[0] + avg_x[2]) / 2 : (avg_x[1] + avg_x[2]) / 2;
-
-    int16_t m0y = avg_y[0] > avg_y[1] ? avg_y[0] - avg_y[1] : avg_y[1] - avg_y[0];
-    int16_t m1y = avg_y[1] > avg_y[2] ? avg_y[1] - avg_y[2] : avg_y[2] - avg_y[1];
-    int16_t m2y = avg_y[2] > avg_y[0] ? avg_y[2] - avg_y[0] : avg_y[0] - avg_y[2];
-
-    if (m0y > TOUCH_RAW_THRESHOLD && m1y > TOUCH_RAW_THRESHOLD && m2y > TOUCH_RAW_THRESHOLD)
-        return 0; // Unstable Y
-
-    if (m0y < m1y)
-        rawPoint->y = (m2y < m0y) ? (avg_y[0] + avg_y[2]) / 2 : (avg_y[0] + avg_y[1]) / 2;
-    else
-        rawPoint->y = (m2y < m1y) ? (avg_y[0] + avg_y[2]) / 2 : (avg_y[1] + avg_y[2]) / 2;
-
-    return 1; // Valid point obtained
+    // Trả về thành công mà không kiểm tra
+    return 1;
 }
+
+// uint8_t Manual_Touch_GetRawPoint(Coordinate *rawPoint)
+// {
+//     // if (!Manual_Touch_Pressed())
+//     // {
+//     //     return 0; // Not pressed
+//     // }
+
+//     uint16_t x_samples[TOUCH_AVG_SAMPLES];
+//     uint16_t y_samples[TOUCH_AVG_SAMPLES];
+//     uint8_t i;
+
+//     // Read all X samples first
+//     for (i = 0; i < TOUCH_AVG_SAMPLES; i++)
+//     {
+//         // if (!Manual_Touch_Pressed() && i >= 1)
+//         if (i >= 1)
+//         { // Check if pen lifted after at least one sample
+//             // If pen lifted early, try to use what we have if enough samples, or fail
+//             if (i < 3)
+//                 return 0; // Not enough samples for even one average
+//             // Fill remaining samples with the last good one to avoid distorting average too much
+//             for (uint8_t j = i; j < TOUCH_AVG_SAMPLES; j++)
+//             {
+//                 x_samples[j] = x_samples[i - 1];
+//             }
+//             break; // Exit X sampling loop
+//         }
+//         x_samples[i] = TP_Read_ADC_Raw(TP_CMD_READ_X);
+//         // HAL_Delay(1); // Increased delay slightly
+//     }
+
+//     // Read all Y samples
+//     for (i = 0; i < TOUCH_AVG_SAMPLES; i++)
+//     {
+//         // if (!Manual_Touch_Pressed() && i >= 1)
+//         if (i >= 1)
+//         {
+//             if (i < 3)
+//                 return 0;
+//             for (uint8_t j = i; j < TOUCH_AVG_SAMPLES; j++)
+//             {
+//                 y_samples[j] = y_samples[i - 1];
+//             }
+//             break; // Exit Y sampling loop
+//         }
+//         y_samples[i] = TP_Read_ADC_Raw(TP_CMD_READ_Y);
+//         // HAL_Delay(2); // Increased delay slightly
+//     }
+
+//     // Averaging and filtering logic from original code
+//     uint16_t avg_x[3], avg_y[3];
+//     avg_x[0] = (x_samples[0] + x_samples[1] + x_samples[2]) / 3;
+//     avg_x[1] = (x_samples[3] + x_samples[4] + x_samples[5]) / 3;
+//     avg_x[2] = (x_samples[6] + x_samples[7] + x_samples[8]) / 3;
+
+//     avg_y[0] = (y_samples[0] + y_samples[1] + y_samples[2]) / 3;
+//     avg_y[1] = (y_samples[3] + y_samples[4] + y_samples[5]) / 3;
+//     avg_y[2] = (y_samples[6] + y_samples[7] + y_samples[8]) / 3;
+
+//     int16_t m0x = avg_x[0] > avg_x[1] ? avg_x[0] - avg_x[1] : avg_x[1] - avg_x[0];
+//     int16_t m1x = avg_x[1] > avg_x[2] ? avg_x[1] - avg_x[2] : avg_x[2] - avg_x[1];
+//     int16_t m2x = avg_x[2] > avg_x[0] ? avg_x[2] - avg_x[0] : avg_x[0] - avg_x[2];
+
+//     if (m0x > TOUCH_RAW_THRESHOLD && m1x > TOUCH_RAW_THRESHOLD && m2x > TOUCH_RAW_THRESHOLD)
+//         return 0; // Unstable X
+
+//     if (m0x < m1x)
+//         rawPoint->x = (m2x < m0x) ? (avg_x[0] + avg_x[2]) / 2 : (avg_x[0] + avg_x[1]) / 2;
+//     else
+//         rawPoint->x = (m2x < m1x) ? (avg_x[0] + avg_x[2]) / 2 : (avg_x[1] + avg_x[2]) / 2;
+
+//     int16_t m0y = avg_y[0] > avg_y[1] ? avg_y[0] - avg_y[1] : avg_y[1] - avg_y[0];
+//     int16_t m1y = avg_y[1] > avg_y[2] ? avg_y[1] - avg_y[2] : avg_y[2] - avg_y[1];
+//     int16_t m2y = avg_y[2] > avg_y[0] ? avg_y[2] - avg_y[0] : avg_y[0] - avg_y[2];
+
+//     if (m0y > TOUCH_RAW_THRESHOLD && m1y > TOUCH_RAW_THRESHOLD && m2y > TOUCH_RAW_THRESHOLD)
+//         return 0; // Unstable Y
+
+//     if (m0y < m1y)
+//         rawPoint->y = (m2y < m0y) ? (avg_y[0] + avg_y[2]) / 2 : (avg_y[0] + avg_y[1]) / 2;
+//     else
+//         rawPoint->y = (m2y < m1y) ? (avg_y[0] + avg_y[2]) / 2 : (avg_y[1] + avg_y[2]) / 2;
+
+//     return 1; // Valid point obtained
+// }
 
 // Calibration Matrix Calculation (from original code)
 static uint8_t CalculateCalibrationMatrix(const Coordinate *displayPtr, const Coordinate *screenPtr, Matrix *matrixPtr)
