@@ -839,7 +839,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     if (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
     {
       Coordinate rawPoint, displayPoint;
-
+      int old_task = current_task; // Lưu task cũ
       if (Manual_Touch_GetRawPoint(&rawPoint))
       {
         Manual_Touch_ApplyCalibration(&displayPoint, &rawPoint);
@@ -852,8 +852,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
               displayPoint.y >= task_boxes[i].y &&
               displayPoint.y < (task_boxes[i].y + task_boxes[i].h))
           {
-            current_task = i;                              // Đặt current_task thành index của task box
-            Manual_LCD_UpdateInfoText(task_boxes[i].name); // Cập nhật thông tin task
+            current_task = i; // Đặt current_task thành index của task box
+            // Khôi phục màu của task cũ nếu có
+            if (old_task >= 0 && old_task < num_tasks && old_task != i)
+            {
+              Manual_LCD_RefillTaskBox(task_boxes[old_task].name, COLOR_BLACK); // Khôi phục màu của task cũ
+            }
+            Manual_LCD_RefillTaskBox(task_boxes[i].name, COLOR_MAGENTA); // Đổi màu task box được chọn
+            Manual_LCD_UpdateInfoText(task_boxes[i].name);               // Cập nhật thông tin task
             return;
           }
         }
@@ -864,7 +870,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             displayPoint.y >= back_button_box.y &&
             displayPoint.y < (back_button_box.y + back_button_box.h))
         {
-          current_task = 4;                                // Nút Back
+          current_task = 4; // Nút Back
+          if (old_task >= 0 && old_task < num_tasks)
+          {
+            Manual_LCD_RefillTaskBox(task_boxes[old_task].name, COLOR_BLACK); // Khôi phục màu của task cũ
+          }
           Manual_LCD_UpdateInfoText(back_button_box.name); // Cập nhật thông tin nút Back
           return;
         }
