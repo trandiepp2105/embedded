@@ -74,8 +74,8 @@ uint32_t TxMailbox1;
 volatile uint8_t can2_received_temperature;
 volatile uint8_t can2_received_group;
 volatile uint8_t can2_received_data_flag = 0;
-
-volatile int current_task = -1;
+volatile int fram_first_time = -1;
+int current_task = -1;
 volatile uint8_t touch_detected = 0; // Flag to indicate touch interrupt has occurred
 GPIO_PinState current_button_state = GPIO_PIN_RESET;
 // Global variables for touch interface
@@ -104,9 +104,9 @@ static void MX_CAN2_Init(void);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -116,10 +116,15 @@ int main(void)
   uint16_t start_y_tasks_row2 = start_y_tasks_row1 + TASK_BOX_H + SPACING_BETWEEN_BOXES;
 
   // Initialize task boxes (now global)
-  task_boxes[0] = (TaskBox_t){MARGIN, start_y_tasks_row1, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-1"};
-  task_boxes[1] = (TaskBox_t){(uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), start_y_tasks_row1, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-2"};
-  task_boxes[2] = (TaskBox_t){MARGIN, start_y_tasks_row2, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-3"};
-  task_boxes[3] = (TaskBox_t){(uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), start_y_tasks_row2, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-4"};
+  // task_boxes[0] = (TaskBox_t){MARGIN, start_y_tasks_row1, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-1"};
+  // task_boxes[1] = (TaskBox_t){(uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), start_y_tasks_row1, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-2"};
+  // task_boxes[2] = (TaskBox_t){MARGIN, start_y_tasks_row2, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-3"};
+  // task_boxes[3] = (TaskBox_t){(uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES), start_y_tasks_row2, TASK_BOX_W_CALC, TASK_BOX_H, "Task 02-4"};
+
+  task_boxes[0] = (TaskBox_t){25, 80, 90, 60, "Task 02-1"};
+  task_boxes[1] = (TaskBox_t){125, 80, 90, 60, "Task 02-2"};
+  task_boxes[2] = (TaskBox_t){25, 150, 90, 60, "Task 02-3"};
+  task_boxes[3] = (TaskBox_t){125, 150, 90, 60, "Task 02-4"};
 
   num_tasks = 4; // Set global count
 
@@ -128,12 +133,20 @@ int main(void)
   Coordinate rawPoint, displayPoint;
 
   // Define the Back Button Box (now global)
+  // back_button_box = (TaskBox_t){
+  //     (uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES),              // x: same margin as tasks
+  //     (uint16_t)(start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING), // y: towards the bottom
+  //     BACK_BUTTON_W,                                                             // w: span most of the width
+  //     BACK_BUTTON_H,                                                             // h: defined height
+  //     "Back"                                                                     // name (used for internal logic if needed, not displayed by default)
+  // };
+
   back_button_box = (TaskBox_t){
-      (uint16_t)(MARGIN + TASK_BOX_W_CALC + SPACING_BETWEEN_BOXES),              // x: same margin as tasks
-      (uint16_t)(start_y_tasks_row2 + TASK_BOX_H + TASK_TO_BACK_BUTTON_SPACING), // y: towards the bottom
-      BACK_BUTTON_W,                                                             // w: span most of the width
-      BACK_BUTTON_H,                                                             // h: defined height
-      "Back"                                                                     // name (used for internal logic if needed, not displayed by default)
+      125,   // x: same margin as tasks
+      230,   // y: towards the bottom
+      75,    // w: span most of the width
+      40,    // h: defined height
+      "Back" // name (used for internal logic if needed, not displayed by default)
   };
 
   /* USER CODE END 1 */
@@ -239,17 +252,17 @@ int main(void)
 
   if (SD_Init())
   {
-	 sprintf(info_text_buffer, "SD OK");
+    sprintf(info_text_buffer, "SD OK");
 
     // Tạo file team9.txt
-//    if (SD_CreateTeamFile())
-//    {
-//      sprintf(info_text_buffer, "SD OK, File created");
-//    }
-//    else
-//    {
-//      sprintf(info_text_buffer, "SD OK, File error");
-//    }
+    //    if (SD_CreateTeamFile())
+    //    {
+    //      sprintf(info_text_buffer, "SD OK, File created");
+    //    }
+    //    else
+    //    {
+    //      sprintf(info_text_buffer, "SD OK, File error");
+    //    }
   }
   else
   {
@@ -269,126 +282,247 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   /* USER CODE BEGIN WHILE */
+  // while (1)
+  // {
+  //   HAL_Delay(10); // Delay to avoid flooding the CPU
+  // }
+
   int can2_received_temperature_int;
+
   while (1)
+  {
+    if (current_task == 0)
     {
-      /* USER CODE END WHILE */
-      if (current_task == 0)
+      Task2_LedBlink(GPIOB, GPIO_PIN_1, BLINK_SPEED_500_MS);
+    }
+    else if (current_task == 1)
+    {
+      char temp_display_str[50];
+      uint8_t current_temp_c = (uint8_t)Read_Internal_Temperature();
+      uint8_t temp_to_send = current_temp_c;
+      TxData1[0] = GROUP_NUMBER;
+      TxData1[1] = temp_to_send;
+      HAL_CAN_AddTxMessage(&hcan1, &TxHeader1, TxData1, &TxMailbox1);
+      while (!can2_received_data_flag)
       {
-        // Task 02-1: Blink LED
-        Task2_LedBlink(GPIOB, GPIO_PIN_1, BLINK_SPEED_1000_MS);
+        HAL_Delay(10);
       }
-      else if (current_task == 1)
-      {
-        char temp_display_str[50];
-        uint8_t current_temp_c = (uint8_t)Read_Internal_Temperature();
-        uint8_t temp_to_send = current_temp_c;
-        TxData1[0] = GROUP_NUMBER;
-        TxData1[1] = temp_to_send;
-        HAL_CAN_AddTxMessage(&hcan1, &TxHeader1, TxData1, &TxMailbox1);
-        while (!can2_received_data_flag)
-        {
-          HAL_Delay(10);
-        }
-        can2_received_data_flag = 0; // Reset the flag for the next message
-	    can2_received_temperature_int = (int)can2_received_temperature;
+      can2_received_data_flag = 0; // Reset the flag for the next message
+      can2_received_temperature_int = (int)can2_received_temperature;
 
-        sprintf(temp_display_str, "Group: %d, temp: %d *C", can2_received_group, can2_received_temperature_int);
-        // sprintf(temp_display_str, "Group: %d, temp: %d *C", GROUP_NUMBER, temp_to_send);
-        strcpy(info_text_buffer, temp_display_str);
+      sprintf(temp_display_str, "Group: %d, temp: %d *C", can2_received_group, can2_received_temperature_int);
+      // sprintf(temp_display_str, "Group: %d, temp: %d *C", GROUP_NUMBER, temp_to_send);
+      strcpy(info_text_buffer, temp_display_str);
+      HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+
+      Manual_LCD_UpdateInfoText(info_text_buffer);
+      __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
+      HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+      HAL_Delay(500); // Delay to avoid flooding the CAN bus
+    }
+    else if (current_task == 2)
+    {
+      HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+
+      byte_read = SD_ReadTeamFile(read_data, sizeof(read_data));
+
+      if (byte_read > 0)
+      {
+        // Đọc thành công, hiển thị nội dung
+        sprintf(info_text_buffer, "SD content: %s", read_data);
         Manual_LCD_UpdateInfoText(info_text_buffer);
-        HAL_Delay(500); // Delay to avoid flooding the CAN bus
       }
-      else if (current_task == 2)
+      else
       {
-        byte_read = SD_ReadTeamFile(read_data, sizeof(read_data));
+        // Đọc thất bại
+        sprintf(info_text_buffer, "Read error (%d)", byte_read);
+        Manual_LCD_UpdateInfoText(info_text_buffer);
 
-        if (byte_read > 0)
+        // Thử khởi tạo lại SD trong trường hợp bị ngắt kết nối
+        if (SD_Init())
         {
-          // Đọc thành công, hiển thị nội dung
-          sprintf(info_text_buffer, "SD content: %s", read_data);
+          sprintf(info_text_buffer, "SD reinitialized");
           Manual_LCD_UpdateInfoText(info_text_buffer);
-        }
-        else
-        {
-          // Đọc thất bại
-          sprintf(info_text_buffer, "Read error (%d)", byte_read);
-          Manual_LCD_UpdateInfoText(info_text_buffer);
+          HAL_Delay(1000);
 
-          // Thử khởi tạo lại SD trong trường hợp bị ngắt kết nối
-          if (SD_Init())
+          // Thử đọc lại
+          byte_read = SD_ReadTeamFile(read_data, sizeof(read_data));
+          if (byte_read > 0)
           {
-            sprintf(info_text_buffer, "SD reinitialized");
+            sprintf(info_text_buffer, "Content: %s", read_data);
             Manual_LCD_UpdateInfoText(info_text_buffer);
-            HAL_Delay(1000);
-
-            // Thử đọc lại
-            byte_read = SD_ReadTeamFile(read_data, sizeof(read_data));
-            if (byte_read > 0)
-            {
-              sprintf(info_text_buffer, "Content: %s", read_data);
-              Manual_LCD_UpdateInfoText(info_text_buffer);
-            }
-            else
-            {
-              sprintf(info_text_buffer, "Still error (%d)", byte_read);
-              Manual_LCD_UpdateInfoText(info_text_buffer);
-            }
-          }
-        }
-
-        HAL_Delay(500); // Delay to avoid flooding the LCD
-      }
-      else if (current_task == 3)
-      {
-        // Task 02-4: Read temperature from FRAM
-        uint8_t read_value = 0;
-        // Đọc nhiệt độ từ FRAM
-        GPIO_PinState prev_btn_state = current_button_state;
-
-        CheckUserButtonAndSaveTemp(&current_button_state);
-        // Kiểm tra trạng thái nút và ghi nhiệt độ vào FRAM
-        if (current_button_state == GPIO_PIN_SET && prev_btn_state == GPIO_PIN_RESET)
-        {
-          // Nút vừa được nhấn xuống
-          if (FRAM_ReadBytes(&hi2c2, USER_TEMP_ADDR, &read_value, 1) == HAL_OK)
-          {
-            sprintf(info_text_buffer, "FRAM Read OK: %d", read_value);
           }
           else
           {
-            sprintf(info_text_buffer, "FRAM Read ERROR");
+            sprintf(info_text_buffer, "Still error (%d)", byte_read);
+            Manual_LCD_UpdateInfoText(info_text_buffer);
           }
-          Manual_LCD_UpdateInfoText(info_text_buffer);
         }
-
-        HAL_Delay(10); // Delay to avoid flooding the LCD
-
-
-
       }
+      __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
+      HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+      HAL_Delay(500); // Delay to avoid flooding the LCD
     }
+    else if (current_task == 3)
+    {
+      HAL_NVIC_DisableIRQ(EXTI4_IRQn);
 
+      // Task 02-4: Read temperature from FRAM
+      uint8_t read_value = 0;
+      // Đọc nhiệt độ từ FRAM
+      GPIO_PinState prev_btn_state = current_button_state;
 
+      CheckUserButtonAndSaveTemp(&current_button_state);
+      //        if (FRAM_ReadBytes(&hi2c2, USER_TEMP_ADDR, &read_value, 1) == HAL_OK)
+      //        {
+      //          sprintf(info_text_buffer, "FRAM Read OK: %d", read_value);
+      //        }
+      //        else
+      //        {
+      //          sprintf(info_text_buffer, "FRAM Read ERROR");
+      //        }
+      //        Manual_LCD_UpdateInfoText(info_text_buffer);
+      // Kiểm tra trạng thái nút và ghi nhiệt độ vào FRAM
+      if (current_button_state == GPIO_PIN_SET && prev_btn_state == GPIO_PIN_RESET)
+      {
+        // Nút vừa được nhấn xuống
+        if (FRAM_ReadBytes(&hi2c2, USER_TEMP_ADDR, &read_value, 1) == HAL_OK)
+        {
+          sprintf(info_text_buffer, "FRAM Read OK: %d", read_value);
+        }
+        else
+        {
+          sprintf(info_text_buffer, "FRAM Read ERROR");
+        }
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+      }
+      __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
+      HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+      HAL_Delay(10); // Delay to avoid flooding the LCD
+    }
+  }
+  while (1)
+  {
+    /* USER CODE END WHILE */
+    if (current_task == 0)
+    {
+      // Task 02-1: Blink LED
+      Task2_LedBlink(GPIOB, GPIO_PIN_1, BLINK_SPEED_1000_MS);
+    }
+    else if (current_task == 1)
+    {
+      char temp_display_str[50];
+      uint8_t current_temp_c = (uint8_t)Read_Internal_Temperature();
+      uint8_t temp_to_send = current_temp_c;
+      TxData1[0] = GROUP_NUMBER;
+      TxData1[1] = temp_to_send;
+      HAL_CAN_AddTxMessage(&hcan1, &TxHeader1, TxData1, &TxMailbox1);
+      while (!can2_received_data_flag)
+      {
+        HAL_Delay(10);
+      }
+      can2_received_data_flag = 0; // Reset the flag for the next message
+      can2_received_temperature_int = (int)can2_received_temperature;
 
+      sprintf(temp_display_str, "Group: %d, temp: %d *C", can2_received_group, can2_received_temperature_int);
+      // sprintf(temp_display_str, "Group: %d, temp: %d *C", GROUP_NUMBER, temp_to_send);
+      strcpy(info_text_buffer, temp_display_str);
+      Manual_LCD_UpdateInfoText(info_text_buffer);
+      HAL_Delay(500); // Delay to avoid flooding the CAN bus
+    }
+    else if (current_task == 2)
+    {
+      byte_read = SD_ReadTeamFile(read_data, sizeof(read_data));
+
+      if (byte_read > 0)
+      {
+        // Đọc thành công, hiển thị nội dung
+        sprintf(info_text_buffer, "SD content: %s", read_data);
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+      }
+      else
+      {
+        // Đọc thất bại
+        sprintf(info_text_buffer, "Read error (%d)", byte_read);
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+
+        // Thử khởi tạo lại SD trong trường hợp bị ngắt kết nối
+        if (SD_Init())
+        {
+          sprintf(info_text_buffer, "SD reinitialized");
+          Manual_LCD_UpdateInfoText(info_text_buffer);
+          HAL_Delay(1000);
+
+          // Thử đọc lại
+          byte_read = SD_ReadTeamFile(read_data, sizeof(read_data));
+          if (byte_read > 0)
+          {
+            sprintf(info_text_buffer, "Content: %s", read_data);
+            Manual_LCD_UpdateInfoText(info_text_buffer);
+          }
+          else
+          {
+            sprintf(info_text_buffer, "Still error (%d)", byte_read);
+            Manual_LCD_UpdateInfoText(info_text_buffer);
+          }
+        }
+      }
+
+      HAL_Delay(500); // Delay to avoid flooding the LCD
+    }
+    else if (current_task == 3)
+    {
+      // Task 02-4: Read temperature from FRAM
+      uint8_t read_value = 0;
+      // Đọc nhiệt độ từ FRAM
+      GPIO_PinState prev_btn_state = current_button_state;
+
+      CheckUserButtonAndSaveTemp(&current_button_state);
+      //        if (FRAM_ReadBytes(&hi2c2, USER_TEMP_ADDR, &read_value, 1) == HAL_OK)
+      //        {
+      //          sprintf(info_text_buffer, "FRAM Read OK: %d", read_value);
+      //        }
+      //        else
+      //        {
+      //          sprintf(info_text_buffer, "FRAM Read ERROR");
+      //        }
+      //        Manual_LCD_UpdateInfoText(info_text_buffer);
+      // Kiểm tra trạng thái nút và ghi nhiệt độ vào FRAM
+      if (current_button_state == GPIO_PIN_SET && prev_btn_state == GPIO_PIN_RESET)
+      {
+        // Nút vừa được nhấn xuống
+        if (FRAM_ReadBytes(&hi2c2, USER_TEMP_ADDR, &read_value, 1) == HAL_OK)
+        {
+          sprintf(info_text_buffer, "FRAM Read OK: %d", read_value);
+        }
+        else
+        {
+          sprintf(info_text_buffer, "FRAM Read ERROR");
+        }
+        Manual_LCD_UpdateInfoText(info_text_buffer);
+      }
+
+      HAL_Delay(10); // Delay to avoid flooding the LCD
+    }
+  }
 }
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -403,9 +537,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -418,10 +551,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC1_Init(void)
 {
 
@@ -436,7 +569,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 1 */
 
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
+   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
@@ -455,7 +588,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -466,14 +599,13 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
-  * @brief CAN1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief CAN1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_CAN1_Init(void)
 {
 
@@ -503,14 +635,13 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
-
 }
 
 /**
-  * @brief CAN2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief CAN2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_CAN2_Init(void)
 {
 
@@ -541,14 +672,13 @@ static void MX_CAN2_Init(void)
   HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
   /* USER CODE END CAN2_Init 2 */
-
 }
 
 /**
-  * @brief I2C2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief I2C2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_I2C2_Init(void)
 {
 
@@ -572,14 +702,13 @@ static void MX_I2C2_Init(void)
   }
   /* USER CODE BEGIN I2C2_Init 2 */
   /* USER CODE END I2C2_Init 2 */
-
 }
 
 /**
-  * @brief SDIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief SDIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_SDIO_SD_Init(void)
 {
 
@@ -600,14 +729,13 @@ static void MX_SDIO_SD_Init(void)
   /* USER CODE BEGIN SDIO_Init 2 */
 
   /* USER CODE END SDIO_Init 2 */
-
 }
 
 /**
-  * @brief SPI1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief SPI1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_SPI1_Init(void)
 {
 
@@ -635,14 +763,13 @@ static void MX_SPI1_Init(void)
   }
   /* USER CODE BEGIN SPI1_Init 2 */
   /* USER CODE END SPI1_Init 2 */
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -657,8 +784,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|LCD_RST_Pin|LCD_BL_Pin|LCD_CS_Pin
-                          |LCD_DC_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1 | LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_RESET);
@@ -677,8 +803,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : PB1 LCD_RST_Pin LCD_BL_Pin LCD_CS_Pin
                            LCD_DC_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|LCD_RST_Pin|LCD_BL_Pin|LCD_CS_Pin
-                          |LCD_DC_Pin;
+  GPIO_InitStruct.Pin = GPIO_PIN_1 | LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -711,12 +836,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == TP_IRQ_Pin)
   {
-
-    // Kiểm tra có phải là chạm không
     if (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
     {
       Coordinate rawPoint, displayPoint;
-      uint8_t old_task = current_task; // Lưu task cũ
 
       if (Manual_Touch_GetRawPoint(&rawPoint))
       {
@@ -730,8 +852,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
               displayPoint.y >= task_boxes[i].y &&
               displayPoint.y < (task_boxes[i].y + task_boxes[i].h))
           {
-            current_task = i; // Đặt current_task thành index của task box
-            break;
+            current_task = i;                              // Đặt current_task thành index của task box
+            Manual_LCD_UpdateInfoText(task_boxes[i].name); // Cập nhật thông tin task
+            return;
           }
         }
 
@@ -741,53 +864,162 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             displayPoint.y >= back_button_box.y &&
             displayPoint.y < (back_button_box.y + back_button_box.h))
         {
-          current_task = 4; // Nút Back
+          current_task = 4;                                // Nút Back
+          Manual_LCD_UpdateInfoText(back_button_box.name); // Cập nhật thông tin nút Back
+          return;
         }
 
-        // Nếu task thay đổi, vẽ lại màn hình ngay
-        if (old_task != current_task)
-        {
-          // Tắt ngắt trước khi vẽ
-          HAL_NVIC_DisableIRQ(EXTI4_IRQn);
-
-          // Xử lý riêng cho các task thông thường và nút back
-          if (current_task >= 0 && current_task < num_tasks)
-          {
-            // Khôi phục màu của task cũ nếu có
-            if (old_task >= 0 && old_task < num_tasks)
-            {
-              Manual_LCD_RefillTaskBox(task_boxes[old_task].name, COLOR_BLACK);
-            }
-
-            // Tô màu task mới được chọn
-            Manual_LCD_RefillTaskBox(task_boxes[current_task].name, COLOR_MAGENTA);
-          }
-          else if (current_task == 4 && old_task != -1) // Back button
-          {
-            // Handle back button action here
-            Manual_LCD_RefillTaskBox(task_boxes[old_task].name, COLOR_BLACK);
-            current_task = -1; // Reset current task value
-          }
-
-          // // Reset CS pins và cấu hình SPI cho Touch
-          // HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET); // Deselect LCD
-          // HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET);   // Deselect Touch
-
-          // // Reset cấu hình SPI cho Touch
-          // hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-          // hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-          // hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-          // HAL_SPI_Init(&hspi1);
-
-          // Xóa cờ ngắt và bật lại
-          __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
-          HAL_NVIC_EnableIRQ(EXTI4_IRQn);
-        }
+        // Nếu không chạm vào task box nào, đặt current_task về -1
+        current_task = -1;
+        Manual_LCD_UpdateInfoText("No task selected"); // Cập nhật thông tin không có task nào được chọn
+        return;
       }
     }
-    // __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
   }
 }
+// void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+// {
+//   if (GPIO_Pin == TP_IRQ_Pin)
+//   {
+//     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1); // Toggle LED for debugging
+//     char temp_text[50];
+//     char info_text_buffer[50];
+//     // Kiểm tra có phải là chạm không
+//     if (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
+//     {
+//       Coordinate rawPoint, displayPoint;
+//       uint8_t old_task = current_task; // Lưu task cũ
+//       // char info_text_buffer[50];
+//       // Manual_Touch_GetRawPoint(&rawPoint);
+//       // Manual_Touch_ApplyCalibration(&displayPoint, &rawPoint);
+//       // int x = (int)displayPoint.x;
+//       // int y = (int)displayPoint.y;
+//       // sprintf(info_text_buffer, "Point x: %d, y: %d", x, y);
+//       // Manual_LCD_UpdateInfoText(info_text_buffer);
+
+//       if (Manual_Touch_GetRawPoint(&rawPoint))
+//       {
+//         Manual_Touch_ApplyCalibration(&displayPoint, &rawPoint);
+
+//         // Kiểm tra xem có chạm vào task box nào không
+//         for (int i = 0; i < num_tasks; i++)
+//         {
+//           if (displayPoint.x >= task_boxes[i].x &&
+//               displayPoint.x < (task_boxes[i].x + task_boxes[i].w) &&
+//               displayPoint.y >= task_boxes[i].y &&
+//               displayPoint.y < (task_boxes[i].y + task_boxes[i].h))
+//           {
+//             current_task = i; // Đặt current_task thành index của task box
+//             return;
+//           }
+//         }
+
+//         // Kiểm tra xem có chạm vào nút Back không
+//         if (displayPoint.x >= back_button_box.x &&
+//             displayPoint.x < (back_button_box.x + back_button_box.w) &&
+//             displayPoint.y >= back_button_box.y &&
+//             displayPoint.y < (back_button_box.y + back_button_box.h))
+//         {
+//           current_task = 4; // Nút Back
+//           return;
+//         }
+
+//         // Nếu không chạm vào task box nào, đặt current_task về -1
+//         current_task = -1;
+//         return;
+//         // Nếu task thay đổi, vẽ lại màn hình ngay
+//         // if (old_task != current_task)
+//         // {
+//         //   // Tắt ngắt trước khi vẽ
+//         //   HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+
+//         //   sprintf(temp_text, "TASK: %d", current_task + 1);
+//         //   // sprintf(temp_display_str, "Group: %d, temp: %d *C", GROUP_NUMBER, temp_to_send);
+//         //   strcpy(info_text_buffer, temp_text);
+//         //   Manual_LCD_UpdateInfoText(info_text_buffer);
+
+//         //   // Xử lý riêng cho các task thông thường và nút back
+//         //   if (current_task >= 0 && current_task < num_tasks)
+//         //   {
+//         //     // Khôi phục màu của task cũ nếu có
+//         //     if (old_task >= 0 && old_task < num_tasks)
+//         //     {
+//         //       // Manual_LCD_RefillTaskBox(task_boxes[old_task].name, COLOR_BLACK);
+//         //       // HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET); // Deselect LCD
+//         //       // HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET);   // Deselect Touch
+
+//         //       // // Gọi lại hàm MX_SPI1_Init để cấu hình lại SPI1 về đúng cấu hình ban đầu
+//         //       // MX_SPI1_Init();
+
+//         //       // // Chờ cho đến khi chân IRQ trở lại HIGH trước khi kích hoạt ngắt
+//         //       // uint32_t timeout = HAL_GetTick() + 10; // 10ms timeout
+//         //       // while (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
+//         //       // {
+//         //       //   if (HAL_GetTick() >= timeout)
+//         //       //     break;
+//         //       // }
+//         //     }
+
+//         //     // Tô màu task mới được chọn
+//         //     // Manual_LCD_RefillTaskBox(task_boxes[current_task].name, COLOR_MAGENTA);
+//         //     // HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET); // Deselect LCD
+//         //     // HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET);   // Deselect Touch
+
+//         //     // // Gọi lại hàm MX_SPI1_Init để cấu hình lại SPI1 về đúng cấu hình ban đầu
+//         //     // MX_SPI1_Init();
+
+//         //     // // Chờ cho đến khi chân IRQ trở lại HIGH trước khi kích hoạt ngắt
+//         //     // uint32_t timeout = HAL_GetTick() + 10; // 10ms timeout
+//         //     // while (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
+//         //     // {
+//         //     //   if (HAL_GetTick() >= timeout)
+//         //     //     break;
+//         //     // }
+//         //   }
+//         //   else if (current_task == 4 && old_task != -1) // Back button
+//         //   {
+//         //     // Handle back button action here
+//         //     // Manual_LCD_RefillTaskBox(task_boxes[old_task].name, COLOR_BLACK);
+//         //     // HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET); // Deselect LCD
+//         //     // HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET);   // Deselect Touch
+
+//         //     // // Gọi lại hàm MX_SPI1_Init để cấu hình lại SPI1 về đúng cấu hình ban đầu
+//         //     // MX_SPI1_Init();
+
+//         //     // // Chờ cho đến khi chân IRQ trở lại HIGH trước khi kích hoạt ngắt
+//         //     // uint32_t timeout = HAL_GetTick() + 10; // 10ms timeout
+//         //     // while (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
+//         //     // {
+//         //     //   if (HAL_GetTick() >= timeout)
+//         //     //     break;
+//         //     // }
+//         //     current_task = -1; // Reset current task value
+//         //   }
+
+//         //   // Xóa cờ ngắt và bật lại
+
+//         //   // Reset CS pins và cấu hình SPI cho Touch
+//         //   HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET); // Deselect LCD
+//         //   HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_SET);   // Deselect Touch
+
+//         //   // Gọi lại hàm MX_SPI1_Init để cấu hình lại SPI1 về đúng cấu hình ban đầu
+//         //   MX_SPI1_Init();
+
+//         //   // Chờ cho đến khi chân IRQ trở lại HIGH trước khi kích hoạt ngắt
+//         //   uint32_t timeout = HAL_GetTick() + 10; // 10ms timeout
+//         //   while (HAL_GPIO_ReadPin(TP_IRQ_GPIO_Port, TP_IRQ_Pin) == GPIO_PIN_RESET)
+//         //   {
+//         //     if (HAL_GetTick() >= timeout)
+//         //       break;
+//         //   }
+//         //   __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
+//         //   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+//         // }
+//       }
+//     }
+//     // __HAL_GPIO_EXTI_CLEAR_IT(TP_IRQ_Pin);
+//   }
+// }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
@@ -798,11 +1030,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
       // Giải mã dữ liệu nhận được (Tùy chọn, để debug)
       if (RxHeader2.DLC >= 2) // Đảm bảo có đủ dữ liệu
       {
-    	can2_received_group = RxData2[0];
+        can2_received_group = RxData2[0];
         can2_received_temperature = RxData2[1];
-
         can2_received_data_flag = 1; // Đánh dấu đã nhận dữ liệu
-}
+      }
     }
   }
 }
@@ -810,9 +1041,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -824,14 +1055,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

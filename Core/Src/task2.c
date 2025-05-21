@@ -24,6 +24,12 @@ void Task2_LedBlink(GPIO_TypeDef *ledPort, uint16_t ledPin, uint32_t blinkSpeed_
 {
   HAL_GPIO_TogglePin(ledPort, ledPin);
   HAL_Delay(blinkSpeed_ms);
+
+//	static uint32_t last_tick = 0;
+//		    if (HAL_GetTick() - last_tick >= blinkSpeed_ms) {
+//		        HAL_GPIO_TogglePin(ledPort, ledPin);
+//		        last_tick = HAL_GetTick();
+//		    }
 }
 
 float Read_Internal_Temperature(void)
