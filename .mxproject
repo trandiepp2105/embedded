@@ -6,6 +6,9 @@ SourceFiles=Core\Src\main.c;FATFS\Target\bsp_driver_sd.c;FATFS\Target\sd_diskio.
 HeaderPath=Drivers\STM32F4xx_HAL_Driver\Inc;Drivers\STM32F4xx_HAL_Driver\Inc\Legacy;Middlewares\Third_Party\FatFs\src;Drivers\CMSIS\Device\ST\STM32F4xx\Include;Drivers\CMSIS\Include;FATFS\Target;FATFS\App;Core\Inc;
 CDefines=USE_HAL_DRIVER;STM32F405xx;USE_HAL_DRIVER;USE_HAL_DRIVER;
 
+[]
+SourceFiles=;;
+
 [PreviousGenFiles]
 AdvancedFolderStructure=true
 HeaderFileListSize=8
@@ -35,7 +38,4 @@ SourcePath#0=..\FATFS\Target
 SourcePath#1=..\FATFS\App
 SourcePath#2=..\Core\Src
 SourceFiles=;
-
-[]
-SourceFiles=;;
 

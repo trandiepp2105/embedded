@@ -47,9 +47,6 @@ float Read_Internal_Temperature(void)
   return temperature_celsius;
 }
 
-// Thêm định nghĩa sau vào phần đầu file (sau các khai báo biến)
-#define USER_TEMP_ADDR 0x0100 // Địa chỉ cố định trong FRAM để lưu nhiệt độ
-
 /**
  * @brief Kiểm tra nút User Button và ghi nhiệt độ vào FRAM ngay lập tức khi nút được nhấn
  * @param previous_state Con trỏ đến biến lưu trạng thái nút trước đó
@@ -70,11 +67,6 @@ void CheckUserButtonAndSaveTemp(GPIO_PinState *previous_state)
     // Ghi nhiệt độ vào FRAM tại địa chỉ cố định, ghi đè lên giá trị cũ
     HAL_StatusTypeDef status = FRAM_WriteBytes(&hi2c2, USER_TEMP_ADDR, &current_temp, 1);
 
-    // Chớp LED để thông báo đã ghi
-    if (status == HAL_OK)
-    {
-      HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);
-    }
   }
 
   // Cập nhật trạng thái nút trước đó

@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#define FILE_NAME "team9.txt"
+#define FILE_NAME "stm32.txt"
 #include <stdint.h>
 
     /**

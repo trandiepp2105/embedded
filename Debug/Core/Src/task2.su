@@ -1,4 +1,4 @@
 ../Core/Src/task2.c:15:6:Task2_Init	4	static
 ../Core/Src/task2.c:23:6:Task2_LedBlink	24	static
 ../Core/Src/task2.c:29:7:Read_Internal_Temperature	24	static
-../Core/Src/task2.c:58:6:CheckUserButtonAndSaveTemp	24	static
+../Core/Src/task2.c:55:6:CheckUserButtonAndSaveTemp	24	static
