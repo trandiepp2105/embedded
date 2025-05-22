@@ -399,7 +399,7 @@ void Manual_LCD_DrawLayout(void)
     // uint8_t char_width_with_spacing = 6; // For 5x7 font at size 1
 
     // 1. Top Info Box: "Nhom: [nhom 01]"
-    const char *info_text = "Nhom: [nhom 01]";
+    const char *info_text = "Nhom: 09";
     uint16_t info_text_x = MARGIN + 5;
     uint16_t info_text_y = INFO_BOX_Y + (INFO_BOX_H - char_height * font_size) / 2;
 
