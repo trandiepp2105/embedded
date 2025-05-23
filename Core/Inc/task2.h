@@ -4,7 +4,13 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h" // Hoặc include cần thiết khác
+#include "rtc_utils.h"     // Để dùng My_RTC_DateTime_t
 
+typedef struct
+{
+    int temperature;
+    My_RTC_DateTime_t dateTime;
+} TemperatureLog_t;
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 extern ADC_HandleTypeDef hadc1;
@@ -50,6 +56,29 @@ void Task2_LedBlink(GPIO_TypeDef *ledPort, uint16_t ledPin, uint32_t blinkSpeed_
  */
 float Read_Internal_Temperature(void);
 
+/**
+ * @brief Kiểm tra nút User Button và ghi nhiệt độ vào FRAM ngay lập tức khi
+ * nút được nhấn
+ * @param previous_state Con trỏ đến biến lưu trạng thái nút trước đó
+ *  @retval None
+ */
+HAL_StatusTypeDef SaveTempLogToFRAM(I2C_HandleTypeDef *hi2c, uint16_t addr, TemperatureLog_t *log);
+
+/**
+ * @brief Đọc nhiệt độ từ FRAM
+ * @param hi2c Con trỏ đến cấu trúc I2C_HandleTypeDef
+ * @param addr Địa chỉ trong FRAM để đọc
+ * @param log Con trỏ đến cấu trúc TempLog_t để lưu kết quả
+ * @retval HAL_StatusTypeDef Trạng thái của HAL (HAL_OK nếu thành công)
+ */
+HAL_StatusTypeDef ReadTempLogFromFRAM(I2C_HandleTypeDef *hi2c, uint16_t addr, TemperatureLog_t *log);
+
+/**
+ * @brief Kiểm tra nút User Button và ghi nhiệt độ vào FRAM ngay lập tức khi
+ * nút được nhấn
+ * @param previous_state Con trỏ đến biến lưu trạng thái nút trước đó
+ * @retval None
+ */
 void CheckUserButtonAndSaveTemp(GPIO_PinState *previous_state);
 
 #endif /* INC_TASK2_H_ */

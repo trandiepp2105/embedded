@@ -1,6 +1,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "task2.h"    // Include file header tương ứng là task2.h
 #include "fram_i2c.h" // Include file cho FRAM
+#include "string.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -8,6 +9,7 @@
 /* Private function prototypes -----------------------------------------------*/
 /* Private user code ---------------------------------------------------------*/
 extern I2C_HandleTypeDef hi2c2;
+extern RTC_HandleTypeDef hrtc;
 
 /**
  * @brief Khởi tạo cho Task 2.
@@ -24,12 +26,6 @@ void Task2_LedBlink(GPIO_TypeDef *ledPort, uint16_t ledPin, uint32_t blinkSpeed_
 {
   HAL_GPIO_TogglePin(ledPort, ledPin);
   HAL_Delay(blinkSpeed_ms);
-
-//	static uint32_t last_tick = 0;
-//		    if (HAL_GetTick() - last_tick >= blinkSpeed_ms) {
-//		        HAL_GPIO_TogglePin(ledPort, ledPin);
-//		        last_tick = HAL_GetTick();
-//		    }
 }
 
 float Read_Internal_Temperature(void)
@@ -44,13 +40,24 @@ float Read_Internal_Temperature(void)
   }
   HAL_ADC_Stop(&hadc1); // Dừng ADC1
 
-  // Công thức tính nhiệt độ từ datasheet (có thể cần điều chỉnh)
+  // Công thức tính nhiệt độ từ datasheet
   // Temperature(in °C) = {(V SENSE – V 25 ) / Avg_Slope} + 25
   // V SENSE = adc_value * VREF_MV / ADC_MAX_VALUE
   float vsense_mv = ((float)adc_value * ADC_VREF_MV) / ADC_MAX_VALUE;
   temperature_celsius = (vsense_mv - TEMP_SENSOR_V25_MV) / TEMP_SENSOR_AVG_SLOPE_MV_PER_C + 25.0f;
 
   return temperature_celsius;
+}
+
+HAL_StatusTypeDef SaveTempLogToFRAM(I2C_HandleTypeDef *hi2c, uint16_t addr, TemperatureLog_t *log)
+{
+  // Ghi trực tiếp struct vào FRAM (giả sử FRAM_WriteBytes hỗ trợ ghi block)
+  return FRAM_WriteBytes(hi2c, addr, (uint8_t *)log, sizeof(TemperatureLog_t));
+}
+
+HAL_StatusTypeDef ReadTempLogFromFRAM(I2C_HandleTypeDef *hi2c, uint16_t addr, TemperatureLog_t *log)
+{
+  return FRAM_ReadBytes(hi2c, addr, (uint8_t *)log, sizeof(TemperatureLog_t));
 }
 
 /**
@@ -68,11 +75,12 @@ void CheckUserButtonAndSaveTemp(GPIO_PinState *previous_state)
   {
     // Nút vừa được nhấn xuống
     // Đọc nhiệt độ từ cảm biến
-    uint8_t current_temp = (uint8_t)Read_Internal_Temperature();
+    TemperatureLog_t log;
+    log.temperature = (int)Read_Internal_Temperature();
 
-    // Ghi nhiệt độ vào FRAM tại địa chỉ cố định, ghi đè lên giá trị cũ
-    HAL_StatusTypeDef status = FRAM_WriteBytes(&hi2c2, USER_TEMP_ADDR, &current_temp, 1);
+    My_RTC_GetDateTime(&hrtc, &log.dateTime); // hrtc là biến toàn cục
 
+    SaveTempLogToFRAM(&hi2c2, USER_TEMP_ADDR, &log);
   }
 
   // Cập nhật trạng thái nút trước đó

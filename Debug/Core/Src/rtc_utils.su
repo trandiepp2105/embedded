@@ -1,0 +1,5 @@
+../Core/Src/rtc_utils.c:19:9:My_RTC_DecToBcd	16	static
+../Core/Src/rtc_utils.c:27:9:My_RTC_BcdToDec	16	static
+../Core/Src/rtc_utils.c:35:19:My_RTC_SetDateTime	48	static
+../Core/Src/rtc_utils.c:66:19:My_RTC_GetDateTime	24	static
+../Core/Src/rtc_utils.c:82:6:My_RTC_InitAndSet	40	static

@@ -30,6 +30,7 @@
 #include "stm32f4xx_hal.h"
 #include "task2.h"
 #include "sd_card_manager.h"
+#include "rtc_utils.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +55,8 @@ CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
 I2C_HandleTypeDef hi2c2;
+
+RTC_HandleTypeDef hrtc;
 
 SD_HandleTypeDef hsd;
 
@@ -94,6 +97,7 @@ static void MX_SDIO_SD_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_CAN2_Init(void);
+static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -174,6 +178,7 @@ int main(void)
   MX_ADC1_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
   // Cấu hình filter cho CAN2
@@ -219,6 +224,8 @@ int main(void)
   TxHeader1.DLC = 2;
   TxHeader1.TransmitGlobalTime = DISABLE;
 
+  My_RTC_InitAndSet(&hrtc);
+
   Manual_LCD_Init();
   Manual_Touch_Init(&hspi1);
   Manual_LCD_DrawLayout(); // This function should draw the tasks and the back button
@@ -226,13 +233,15 @@ int main(void)
 
   /* USER CODE END 4 */
   /* USER CODE END 2 */
-
+  char display_buffer[50];
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  TemperatureLog_t log;
   int can2_received_temperature_int;
-
   while (1)
   {
+    /* USER CODE END WHILE */
+    /* USER CODE BEGIN 3 */
     if (current_task == 0)
     {
       Task2_LedBlink(GPIOB, GPIO_PIN_1, BLINK_SPEED_200_MS);
@@ -318,9 +327,9 @@ int main(void)
       if (current_button_state == GPIO_PIN_SET && prev_btn_state == GPIO_PIN_RESET)
       {
         // Nút vừa được nhấn xuống
-        if (FRAM_ReadBytes(&hi2c2, USER_TEMP_ADDR, &read_value, 1) == HAL_OK)
+        if (ReadTempLogFromFRAM(&hi2c2, USER_TEMP_ADDR, &log) == HAL_OK)
         {
-          sprintf(info_text_buffer, "FRAM Read OK: %d", read_value);
+          sprintf(info_text_buffer, "FRAM Read OK: %d", log.temperature);
         }
         else
         {
@@ -333,8 +342,12 @@ int main(void)
       HAL_Delay(10); // Delay to avoid flooding the LCD
     }
   }
-  /* USER CODE BEGIN WHILE */
+
+  /* USER CODE END 3 */
+  /* USER CODE BEGIN 3 */
 }
+/* USER CODE END 3 */
+
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -352,8 +365,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
    * in the RCC_OscInitTypeDef structure.
    */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 25;
@@ -534,6 +548,68 @@ static void MX_I2C2_Init(void)
 }
 
 /**
+ * @brief RTC Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+   */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+   */
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
+  sTime.Seconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
+}
+
+/**
  * @brief SDIO Initialization Function
  * @param None
  * @retval None
@@ -613,7 +689,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1 | LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_1_Pin | LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(TP_CS_GPIO_Port, TP_CS_Pin, GPIO_PIN_RESET);
@@ -624,15 +700,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  /*Configure GPIO pin : USER_BUTTON_Pin */
+  GPIO_InitStruct.Pin = USER_BUTTON_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 LCD_RST_Pin LCD_BL_Pin LCD_CS_Pin
+  /*Configure GPIO pins : LED_1_Pin LCD_RST_Pin LCD_BL_Pin LCD_CS_Pin
                            LCD_DC_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_1 | GPIO_PIN_0 | LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin;
+  GPIO_InitStruct.Pin = LED_1_Pin | LCD_RST_Pin | LCD_BL_Pin | LCD_CS_Pin | LCD_DC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

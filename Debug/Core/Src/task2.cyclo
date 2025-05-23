@@ -1,4 +1,6 @@
-../Core/Src/task2.c:15:6:Task2_Init	1
-../Core/Src/task2.c:23:6:Task2_LedBlink	1
-../Core/Src/task2.c:35:7:Read_Internal_Temperature	2
-../Core/Src/task2.c:61:6:CheckUserButtonAndSaveTemp	3
+../Core/Src/task2.c:17:6:Task2_Init	1
+../Core/Src/task2.c:25:6:Task2_LedBlink	1
+../Core/Src/task2.c:31:7:Read_Internal_Temperature	2
+../Core/Src/task2.c:52:19:SaveTempLogToFRAM	1
+../Core/Src/task2.c:58:19:ReadTempLogFromFRAM	1
+../Core/Src/task2.c:68:6:CheckUserButtonAndSaveTemp	3
